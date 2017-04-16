@@ -43,6 +43,7 @@
   },
   "scripts": {
     "test": "jest",
+    "docs": "documentation readme src/index.js --section=API",
     "build": "npm run build:commonjs && npm run build:umd && npm run build:umd:min",
     "build:commonjs": "cross-env BABEL_ENV=commonjs babel src --ignore __tests__ --out-dir lib",
     "build:umd": "cross-env BABEL_ENV=commonjs NODE_ENV=development webpack src/index.js dist/fp-units.js",
