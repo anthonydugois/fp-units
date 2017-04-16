@@ -1,0 +1,62 @@
+{
+  "name": "fp-units",
+  "version": "0.1.0",
+  "description": "An FP-oriented library to easily convert CSS units.",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "dist"
+  ],
+  "author": "Anthony Dugois <dev.anthonydugois@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthonydugois/fp-units.git"
+  },
+  "keywords": [
+    "css-units",
+    "units",
+    "converter",
+    "fp",
+    "functional-programming"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "ramda": "^0.23.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-core": "^6.24.1",
+    "babel-jest": "^19.0.0",
+    "babel-loader": "^6.4.1",
+    "babel-plugin-ramda": "^1.2.0",
+    "babel-plugin-transform-flow-strip-types": "^6.22.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-es2016": "^6.24.1",
+    "babel-preset-es2017": "^6.24.1",
+    "cross-env": "^4.0.0",
+    "flow-bin": "^0.43.1",
+    "jest": "^19.0.2",
+    "path": "^0.12.7",
+    "rimraf": "^2.6.1",
+    "webpack": "^2.3.3"
+  },
+  "scripts": {
+    "test": "jest",
+    "build": "npm run build:commonjs && npm run build:umd && npm run build:umd:min",
+    "build:commonjs": "cross-env BABEL_ENV=commonjs babel src --ignore __tests__ --out-dir lib",
+    "build:umd": "cross-env BABEL_ENV=commonjs NODE_ENV=development webpack src/index.js dist/fp-units.js",
+    "build:umd:min": "cross-env BABEL_ENV=commonjs NODE_ENV=production webpack src/index.js dist/fp-units.min.js",
+    "clean": "rimraf lib dist coverage",
+    "lint": "npm run lint:flow",
+    "lint:flow": "flow check || exit 0",
+    "preversion": "npm test",
+    "postversion": "git push && git push --tags",
+    "prepublish": "npm run lint && npm test && npm run build",
+    "postpublish": "npm run clean"
+  },
+  "jest": {
+    "testMatch": [
+      "**/__tests__/**"
+    ]
+  }
+}
