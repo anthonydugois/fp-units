@@ -24,7 +24,7 @@ const getPairs = R.curryN(2, (str, arr) =>
 /**
  * Parses a string and returns a list of [value, unit] pairs.
  * @param {string} str The string to parse.
- * @return {Array.<Array.<string|number>>}
+ * @return {Array<Array<string|number>>}
  * @example
  * import { parse } from 'fp-units'
  *

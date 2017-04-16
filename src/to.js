@@ -33,6 +33,19 @@ const CONVERTERS = {
     grad: conversion(R.always(R.divide(200, Math.PI))),
     turn: conversion(R.always(R.divide(1, R.multiply(2, Math.PI)))),
   },
+  s: {
+    s: conversion(R.always(1)),
+    ms: conversion(R.always(1000)),
+  },
+  hz: {
+    hz: conversion(R.always(1)),
+    khz: conversion(R.always(10e-3)),
+  },
+  dppx: {
+    dppx: conversion(R.always(1)),
+    dpi: conversion(R.always(96)),
+    dpcm: conversion(R.always(R.divide(96, 2.54))),
+  },
 }
 
 const BASE_UNITS = R.keys(CONVERTERS)
@@ -56,10 +69,10 @@ const convert = R.curryN(3, (config, unit, [value, from]) => {
 
 /**
  * Creates a conversion function. The config allows you to adjust the parameters used to make conversions of relative units like rem or %.
- * @param {Config} config The config object.
+ * @param {Object} config The config object.
  * @param {string} unit The desired unit.
  * @param {string} str A string of values and units to convert.
- * @return {Array.<number>}
+ * @return {Array<number>}
  * @example
  * import { converter } from 'fp-units'
  *
@@ -79,7 +92,7 @@ export const converter: Converter = R.curryN(3, (config, unit, str) =>
  * Converts CSS units. This function is a shortcut to bypass config (convenient if you don't need to convert relative units).
  * @param {string} unit The desired unit.
  * @param {string} str A string of values and units to convert.
- * @return {Array.<number>}
+ * @return {Array<number>}
  * @example
  * import { to } from 'fp-units'
  *
