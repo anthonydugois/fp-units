@@ -2,6 +2,8 @@
 
 An FP-oriented library to easily convert CSS units. Provides some convenient curried functions to parse and convert every CSS units available in the spec.
 
+[![Build Status](https://travis-ci.org/anthonydugois/fp-units.svg?branch=master)](https://travis-ci.org/anthonydugois/fp-units)
+
 1.  [Installation](#installation)
 2.  [Basic usage](#basic-usage)
 3.  [Supported units](#supported-units)
