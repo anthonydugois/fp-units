@@ -57,6 +57,8 @@
     "postpublish": "npm run clean"
   },
   "jest": {
+    "coverageDirectory": "./coverage/",
+    "collectCoverage": true,
     "testMatch": [
       "**/__tests__/**"
     ]
