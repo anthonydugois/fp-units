@@ -1,0 +1,26 @@
+declare module ramda {
+  declare var always: Function
+  declare var compose: Function
+  declare var head: Function
+  declare var has: Function
+  declare var both: Function
+  declare var identity: Function
+  declare var multiply: Function
+  declare var divide: Function
+  declare var adjust: Function
+  declare var slice: Function
+  declare var ifElse: Function
+  declare var isNil: Function
+  declare var append: Function
+  declare var curryN: Function
+  declare var prop: Function
+  declare var propOr: Function
+  declare var converge: Function
+  declare var min: Function
+  declare var max: Function
+  declare var map: Function
+  declare var find: Function
+  declare var flatten: Function
+  declare var keys: Function
+  declare var and: Function
+}
