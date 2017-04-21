@@ -5,11 +5,11 @@ import { isString, isNumber, isArray } from './_is'
 import { parse } from '../parse'
 
 const toPair = n => R.pair(n, '')
+const concat = (acc, v) => R.concat(acc, values(v))
 
-// no point-free here because of hoisting limitations
-const handleString = str => parse(str)
-const handleNumber = n => R.compose(R.of, toPair)(n)
-const handleArray = arr => R.map(R.compose(R.unnest, values), arr)
+const handleString = parse
+const handleNumber = R.compose(R.of, toPair)
+const handleArray = R.reduce(concat, [])
 
 export const values = R.cond([
   [isString, handleString],
