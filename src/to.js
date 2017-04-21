@@ -1,6 +1,6 @@
 // @flow
 
-import type { Config, Values } from './types'
+import type { Config, Units, Values } from './types'
 
 import R from 'ramda'
 import * as defaults from './core/_defaults'
@@ -51,8 +51,9 @@ const CONVERTERS = {
 
 const BASE_UNITS = R.keys(CONVERTERS)
 
-const getBaseUnit = unit =>
-  R.find(base => R.has(unit, R.prop(base, CONVERTERS)), BASE_UNITS)
+const getBase = base => R.prop(base, CONVERTERS)
+const findBase = unit => base => R.has(unit, getBase(base))
+const getBaseUnit = unit => R.find(findBase(unit), BASE_UNITS)
 
 const getConverter = unit =>
   R.compose(R.prop(unit), R.prop(getBaseUnit(unit)))(CONVERTERS)
@@ -108,9 +109,11 @@ const convert = R.curryN(3, (config, unit, [value, from]) => {
  * to('rem', '32px')
  * // [2]
  */
-export const converter: Converter<Config, Values> = R.curryN(3, (c, u, v) =>
-  R.map(convert(c, u), values(v)),
-)
+export const converter: Converter<
+  Config,
+  Units,
+  Values
+> = R.curryN(3, (c, u, v) => R.map(convert(c, u), values(v)))
 
 /**
  * Converts CSS units. This function is a shortcut to bypass config (convenient if you don't need to convert relative units).
@@ -123,4 +126,4 @@ export const converter: Converter<Config, Values> = R.curryN(3, (c, u, v) =>
  * to('px', '100 2cm 15mm 4q 4in 30pc 24pt')
  * // [100, 75.59055, 56.69291, 3.77953, 384, 480, 32]
  */
-export const to: To<Values> = converter({})
+export const to: To<Units, Values> = converter({})
