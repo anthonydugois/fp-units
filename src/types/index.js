@@ -1,6 +1,6 @@
 // @flow
 
-type Config = {
+export type Config = {
   root?: HTMLElement,
   element?: HTMLElement,
   viewportWidth?: number,
@@ -12,7 +12,4 @@ type Config = {
   lineHeight?: number,
 }
 
-export type Parse = (s: string) => [number, string][]
-export type To = (u: string) => (s: string) => number[]
-export type Converter = (c: Config) => To
-export type Default = (c: Config) => number
+export type Values = string | number | Array<string | number>

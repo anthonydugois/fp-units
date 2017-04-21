@@ -88,3 +88,7 @@ test('should correctly convert absolut angles to rad', () => {
 test('should throw when trying to convert incompatible units', () => {
   expect(() => to('rad', '100px')).toThrow()
 })
+
+test('should throw when trying to convert in an unknown unit', () => {
+  expect(() => to('foo', '100px')).toThrow()
+})

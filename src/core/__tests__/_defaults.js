@@ -8,7 +8,7 @@ import {
   getElementFontSize,
   getElementLineHeight,
   getElementSize,
-} from '../defaults'
+} from '../_defaults'
 
 test('should return viewport width', () => {
   expect(getViewportWidth({ viewportWidth: 1024 })).toBe(1024)

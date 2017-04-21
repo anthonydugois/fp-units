@@ -1,7 +1,5 @@
 // @flow
 
-import type { Parse } from './types'
-
 import R from 'ramda'
 
 const UNIT_REGEX = /([\d.+-]+(?:e?[\d.+-]+)*)\s*([a-z%]*)/gi
@@ -22,7 +20,7 @@ const getPairs = R.curryN(2, (str, arr) =>
 )
 
 /**
- * Parses a string and returns a list of [value, unit] pairs.
+ * Parses a string and returns a list of `[value, unit]` pairs.
  * @param {string} str The string to parse.
  * @return {Array<Array<string|number>>}
  * @example

@@ -16,7 +16,7 @@ An FP-oriented library to easily convert CSS units. Provides some convenient cur
 
 ## Basic usage
 
-### Absolut units
+### Absolute units
 
 ```js
 import { to } from 'fp-units'
@@ -33,15 +33,32 @@ In order to be able to do conversions between relative units, **fp-units** needs
 import { converter } from 'fp-units'
 
 const config = {
-  viewportWidth: window.innerWidth, // width of the viewport (vw, vmin, vmax)
-  viewportHeight: window.innerHeight, // height of the viewport (vh, vmin, vmax)
-  root: document.documentElement, // the root element (rem, rlh)
-  element: document.querySelector('#foobar'), // the element (em, lh, %)
-  rootFontSize: 16, // a custom root font size, overrides the font-size value of the root element (rem)
-  rootLineHeight: 16, // a custom root line height, overrides the line-height value of the root element (rlh)
-  fontSize: 16, // a custom font size, overrides the font-size value of the element (em)
-  lineHeight: 16, // a custom line height, overrides the line-height value of the element (lh)
-  size: 200, // a custom size, overrides the width value of the element (%)
+  // width of the viewport (vw, vmin, vmax)
+  viewportWidth: window.innerWidth,
+
+  // height of the viewport (vh, vmin, vmax)
+  viewportHeight: window.innerHeight,
+
+  // the root element (rem, rlh)
+  root: document.documentElement,
+
+  // the element (em, lh, %)
+  element: document.querySelector('#foobar'),
+
+  // a custom root font size, overrides the font-size value of the root element (rem)
+  rootFontSize: 16,
+
+  // a custom root line height, overrides the line-height value of the root element (rlh)
+  rootLineHeight: 16,
+
+  // a custom font size, overrides the font-size value of the element (em)
+  fontSize: 16,
+
+  // a custom line height, overrides the line-height value of the element (lh)
+  lineHeight: 16,
+
+  // a custom size, overrides the width value of the element (%)
+  size: 200,
 }
 
 converter(config, 'px', '2rem 4em 2rlh 4lh 50% 25vw 40vh 5vmin 10vmax')

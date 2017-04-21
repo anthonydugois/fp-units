@@ -1,10 +1,11 @@
 // @flow
 
-import type { Converter, To } from './types'
+import type { Config, Values } from './types'
 
 import R from 'ramda'
+import * as defaults from './core/_defaults'
+import { values } from './core/_values'
 import { parse } from './parse'
-import * as defaults from './defaults'
 
 const conversion = coef => (config, f) => n => f(coef(config)) * n
 
@@ -56,22 +57,34 @@ const getBaseUnit = unit =>
 const getConverter = unit =>
   R.compose(R.prop(unit), R.prop(getBaseUnit(unit)))(CONVERTERS)
 
+const safeFrom = (unit, from) => R.when(R.isEmpty, R.always(unit))(from)
+
 const convert = R.curryN(3, (config, unit, [value, from]) => {
-  if (getBaseUnit(unit) !== getBaseUnit(from)) {
-    throw new Error(`Incompatible units: can't convert ${from} to ${unit}.`)
+  const baseUnit = getBaseUnit(unit)
+  const safe = safeFrom(baseUnit, from)
+  const baseSafe = getBaseUnit(safe)
+
+  if (R.isNil(baseUnit)) {
+    throw new Error(`Unknown unit: the \`${unit}\` unit is not handled.`)
+  }
+
+  if (baseUnit !== baseSafe) {
+    throw new Error(
+      `Incompatible units: can't convert \`${safe}\` to \`${unit}\`.`,
+    )
   }
 
   return R.compose(
     getConverter(unit)(config, R.identity),
-    getConverter(from)(config, R.divide(1)),
+    getConverter(safe)(config, R.divide(1)),
   )(value)
 })
 
 /**
- * Creates a conversion function. The config allows you to adjust the parameters used to make conversions of relative units like rem or %.
+ * Creates a conversion function. The config allows you to adjust the parameters used to make conversions of relative units like `rem` or `%`.
  * @param {Object} config The config object.
  * @param {string} unit The desired unit.
- * @param {string} str A string of values and units to convert.
+ * @param {string|number|Array<string|number>} values The values and units to convert.
  * @return {Array<number>}
  * @example
  * import { converter } from 'fp-units'
@@ -84,14 +97,14 @@ const convert = R.curryN(3, (config, unit, [value, from]) => {
  * to('px', '2rem 4em 2rlh 4lh 50% 25vw 40vh 5vmin 10vmax')
  * // [32, 96, 32, 104, 50, 480, 432, 54, 192]
  */
-export const converter: Converter = R.curryN(3, (config, unit, str) =>
-  R.map(convert(config, unit), parse(str)),
+export const converter: Converter<Config, Values> = R.curryN(3, (c, u, v) =>
+  R.map(convert(c, u), values(v)),
 )
 
 /**
  * Converts CSS units. This function is a shortcut to bypass config (convenient if you don't need to convert relative units).
  * @param {string} unit The desired unit.
- * @param {string} str A string of values and units to convert.
+ * @param {string|number|Array<string|number>} values The values and units to convert.
  * @return {Array<number>}
  * @example
  * import { to } from 'fp-units'
@@ -99,4 +112,4 @@ export const converter: Converter = R.curryN(3, (config, unit, str) =>
  * to('px', '100px 2cm 15mm 4q 4in 30pc 24pt')
  * // [100, 75.59055, 56.69291, 3.77953, 384, 480, 32]
  */
-export const to: To = converter({})
+export const to: To<Values> = converter({})
