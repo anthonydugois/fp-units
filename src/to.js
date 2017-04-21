@@ -82,6 +82,8 @@ const convert = R.curryN(3, (config, unit, [value, from]) => {
 
 /**
  * Creates a conversion function. The config allows you to adjust the parameters used to make conversions of relative units like `rem` or `%`.
+ *
+ * Note: if you don't provide units, it will assume that the provided value is expressed in the canonical unit corresponding to the nature of the desired unit (e.g. `px` if the desired unit is a length).
  * @param {Object} config The config object.
  * @param {string} unit The desired unit.
  * @param {string|number|Array<string|number>} values The values and units to convert.
@@ -94,8 +96,17 @@ const convert = R.curryN(3, (config, unit, [value, from]) => {
  *   element: document.querySelector('#foobar'),
  * })
  *
- * to('px', '2rem 4em 2rlh 4lh 50% 25vw 40vh 5vmin 10vmax')
- * // [32, 96, 32, 104, 50, 480, 432, 54, 192]
+ * to('px', '30 2rem 4em 2rlh 4lh 50% 25vw 40vh 5vmin 10vmax')
+ * // [30, 32, 96, 32, 104, 50, 480, 432, 54, 192]
+ *
+ * to('px', [30, '2rem', '4em'])
+ * // [30, 32, 96]
+ *
+ * to('rem', 32)
+ * // [2]
+ *
+ * to('rem', '32px')
+ * // [2]
  */
 export const converter: Converter<Config, Values> = R.curryN(3, (c, u, v) =>
   R.map(convert(c, u), values(v)),
@@ -109,7 +120,7 @@ export const converter: Converter<Config, Values> = R.curryN(3, (c, u, v) =>
  * @example
  * import { to } from 'fp-units'
  *
- * to('px', '100px 2cm 15mm 4q 4in 30pc 24pt')
+ * to('px', '100 2cm 15mm 4q 4in 30pc 24pt')
  * // [100, 75.59055, 56.69291, 3.77953, 384, 480, 32]
  */
 export const to: To<Values> = converter({})

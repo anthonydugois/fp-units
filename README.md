@@ -107,7 +107,7 @@ to('vmin', '50% 40px')
 
 ### parse
 
-Parses a string and returns a list of [value, unit] pairs.
+Parses a string and returns a list of `[value, unit]` pairs.
 
 Type: Parse
 
@@ -124,19 +124,21 @@ parse('1px 3.054e-2em 50% 10')
 // [[1, 'px'], [3.054e-2, 'em'], [50, '%'], [10, '']]
 ```
 
-Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;([string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String) \| [number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number))>>**
+Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;([string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String) \| [number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number))>>** 
 
 ### converter
 
-Creates a conversion function. The config allows you to adjust the parameters used to make conversions of relative units like rem or %.
+Creates a conversion function. The config allows you to adjust the parameters used to make conversions of relative units like `rem` or `%`.
 
-Type: Converter
+Note: if you don't provide units, it will assume that the provided value is expressed in the canonical unit corresponding to the nature of the desired unit (e.g. `px` if the desired unit is a length).
+
+Type: Converter&lt;Config, Values>
 
 **Parameters**
 
 -   `config` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)** The config object.
 -   `unit` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** The desired unit.
--   `str` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** A string of values and units to convert.
+-   `values` **([string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String) \| [number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number) \| [Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;([string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String) \| [number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number))>)** The values and units to convert.
 
 **Examples**
 
@@ -148,33 +150,42 @@ const to = converter({
   element: document.querySelector('#foobar'),
 })
 
-to('px', '2rem 4em 2rlh 4lh 50% 25vw 40vh 5vmin 10vmax')
-// [32, 96, 32, 104, 50, 480, 432, 54, 192]
+to('px', '30 2rem 4em 2rlh 4lh 50% 25vw 40vh 5vmin 10vmax')
+// [30, 32, 96, 32, 104, 50, 480, 432, 54, 192]
+
+to('px', [30, '2rem', '4em'])
+// [30, 32, 96]
+
+to('rem', 32)
+// [2]
+
+to('rem', '32px')
+// [2]
 ```
 
-Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)>**
+Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)>** 
 
 ### to
 
 Converts CSS units. This function is a shortcut to bypass config (convenient if you don't need to convert relative units).
 
-Type: To
+Type: To&lt;Values>
 
 **Parameters**
 
 -   `unit` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** The desired unit.
--   `str` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** A string of values and units to convert.
+-   `values` **([string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String) \| [number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number) \| [Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;([string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String) \| [number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number))>)** The values and units to convert.
 
 **Examples**
 
 ```javascript
 import { to } from 'fp-units'
 
-to('px', '100px 2cm 15mm 4q 4in 30pc 24pt')
+to('px', '100 2cm 15mm 4q 4in 30pc 24pt')
 // [100, 75.59055, 56.69291, 3.77953, 384, 480, 32]
 ```
 
-Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)>**
+Returns **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)>** 
 
 ## License
 
