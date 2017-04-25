@@ -2,41 +2,43 @@
 
 import R from 'ramda'
 
-const re = () => /calc\((.+)\)|([+-]?[\d.]+(?:e?[+-]?[\d.]+)*)([a-z%]*)/gi
-const UNIT_REGEX = re()
-const OPERATORS_REGEX = /([/*]|[+-]\s)/g
+// 1. Match calc groups: calc\((.+)\)
+// 2. Match operators: ([/*]|[+-]\s)
+// 3. Match values: ([+-]?\d+\.?\d*(?:e?[+-]?\d+\.?\d*)?)
+// 4. Match units: ([a-z%]*)
+
+const re = () =>
+  /calc\((.+)\)|([/*]|[+-]\s)|([+-]?\d+\.?\d*(?:e?[+-]?\d+\.?\d*)?)([a-z%]*)/gi
 
 const isNotNil = R.complement(R.isNil)
 
-const getCalc = R.compose(String, R.nth(1))
-const getValue = R.compose(Number, R.nth(2))
-const getUnit = R.compose(String, R.nth(3))
+const nextMatch = (regex, str, arr) =>
+  R.ifElse(
+    isNotNil,
+    match => nextMatch(regex, str, merge(match, arr)),
+    R.always(arr),
+  )(regex.exec(str))
 
-const shouldProcessCalc = R.compose(isNotNil, R.nth(1))
+const getMatches = R.curryN(2, (arr, str) => nextMatch(re(), str, arr))
 
+const getCalc = R.compose(R.trim, String, R.nth(1))
+const getOperator = R.compose(R.trim, String, R.nth(2))
+const getValue = R.compose(Number, R.nth(3))
+const getUnit = R.compose(R.trim, String, R.nth(4))
+
+const getRecCalc = R.compose(getMatches([]), getCalc)
 const getPair = R.converge(R.pair, [getValue, getUnit])
-const exec = str => UNIT_REGEX.exec(str)
 
-const next = (str, arr) => res =>
-  R.compose(getPairs(str), R.append(getPair(res)))(arr)
+const isCalc = R.compose(isNotNil, R.nth(1))
+const isOperator = R.compose(isNotNil, R.nth(2))
 
-const getPairs = R.curryN(2, (str, arr) =>
-  R.compose(R.ifElse(R.isNil, R.always(arr), next(str, arr)), exec)(str),
-)
+const dispatch = R.cond([
+  [isCalc, getRecCalc],
+  [isOperator, getOperator],
+  [R.T, getPair],
+])
 
-const splitByOp = R.split(OPERATORS_REGEX)
-
-const execPair = R.ifElse(
-  R.test(UNIT_REGEX),
-  R.compose(getPair, str => re().exec(str)),
-  R.identity,
-)
-
-const processCalc = R.compose(
-  R.map(R.compose(execPair, R.trim)),
-  splitByOp,
-  getCalc,
-)
+const merge = (match, arr) => R.append(dispatch(match), arr)
 
 /**
  * Parses a string and returns a list of `[value, unit]` pairs.
@@ -48,4 +50,4 @@ const processCalc = R.compose(
  * parse('1px 3.054e-2em 50% 10')
  * // [[1, 'px'], [3.054e-2, 'em'], [50, '%'], [10, '']]
  */
-export const parse: Parse = str => getPairs(str, [])
+export const parse: Parse = getMatches([])
