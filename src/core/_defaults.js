@@ -11,7 +11,8 @@ const vh = isBrowser() ? window.innerHeight : 0
 const flatHead = R.compose(R.head, R.flatten)
 
 const getProperty = property => R.compose(Number, R.prop(property))
-const getStyle = prop => R.compose(String, R.prop(prop), getComputedStyle)
+const getStyle = prop =>
+  R.compose(String, R.prop(prop), n => getComputedStyle(n))
 
 const getNodePropValue = prop =>
   R.compose(Number, flatHead, parse, getStyle(prop))

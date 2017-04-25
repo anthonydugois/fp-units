@@ -7,7 +7,12 @@ import * as defaults from './core/_defaults'
 import { values } from './core/_values'
 import { parse } from './parse'
 
-const conversion = coef => (config, f) => n => f(coef(config)) * n
+const conversion: (
+  f: Function,
+) => (c: Object, d: Function) => (n: number) => number = coef => (
+  config,
+  f,
+) => n => f(coef(config)) * n
 
 const CONVERTERS = {
   px: {
@@ -49,37 +54,110 @@ const CONVERTERS = {
   },
 }
 
-const BASE_UNITS = R.keys(CONVERTERS)
+const safeCanonical: (b: string, m: Object) => Object = R.propOr({})
 
-const getBase = base => R.prop(base, CONVERTERS)
-const findBase = unit => base => R.has(unit, getBase(base))
-const getBaseUnit = unit => R.find(findBase(unit), BASE_UNITS)
+const hasUnit: (u: string, m: Object) => (b: string) => boolean = (
+  unit,
+  map,
+) => base => R.has(unit, safeCanonical(base, map))
 
-const getConverter = unit =>
-  R.compose(R.prop(unit), R.prop(getBaseUnit(unit)))(CONVERTERS)
+const makeGetCanonical: (m: Object) => (u: string) => ?string = map => unit =>
+  R.find(hasUnit(unit, map), R.keys(map))
 
-const safeFrom = (unit, from) => R.when(R.isEmpty, R.always(unit))(from)
+const getCanonical: (u: string) => ?string = makeGetCanonical(CONVERTERS)
 
-const convert = R.curryN(3, (config, unit, [value, from]) => {
-  const baseUnit = getBaseUnit(unit)
-  const safe = safeFrom(baseUnit, from)
-  const baseSafe = getBaseUnit(safe)
+const makeGlobalConverter: (
+  m: Object,
+) => (u: string) => Function = map => unit =>
+  R.ifElse(
+    R.isNil,
+    R.always(conversion(R.always(1))),
+    canonical => map[canonical][unit],
+  )(getCanonical(unit))
 
-  if (R.isNil(baseUnit)) {
-    throw new Error(`Unknown unit: the \`${unit}\` unit is not handled.`)
+const getConverter: (u: string) => Function = makeGlobalConverter(CONVERTERS)
+
+const convertPair: (
+  c: Object,
+) => (
+  u: string,
+) => (
+  p: [number, string],
+) => number = R.curryN(3, (config, unit, [value, _from]) => {
+  const canonicalUnit = getCanonical(unit)
+
+  if (R.isNil(canonicalUnit)) {
+    throw new Error(`Unknown unit: \`${unit}\` is not handled.`)
   }
 
-  if (baseUnit !== baseSafe) {
+  const from = R.when(R.isEmpty, R.always(unit))(_from)
+  const canonicalFrom = getCanonical(from)
+
+  if (R.isNil(canonicalFrom)) {
+    throw new Error(`Unknown unit: \`${from}\` is not handled.`)
+  }
+
+  if (!R.equals(canonicalUnit, canonicalFrom)) {
     throw new Error(
-      `Incompatible units: can't convert \`${safe}\` to \`${unit}\`.`,
+      `Incompatible units: \`${from}\` cannot be converted to \`${unit}\`.`,
     )
   }
 
   return R.compose(
     getConverter(unit)(config, R.identity),
-    getConverter(safe)(config, R.divide(1)),
+    getConverter(from)(config, R.divide(1)),
   )(value)
 })
+
+const isPair: (a: any) => boolean = R.allPass([
+  R.is(Array),
+  R.compose(R.equals(2), R.length),
+  R.compose(R.is(Number), R.nth(0)),
+  R.compose(R.is(String), R.nth(1)),
+])
+
+const isOperator = op => R.contains(op, ['+', '-', '/', '*'])
+
+const operator = R.cond([
+  [R.equals('+'), R.always(R.add)],
+  [R.equals('-'), R.always(R.subtract)],
+  [R.equals('/'), R.always(R.divide)],
+  [R.equals('*'), R.always(R.multiply)],
+])
+
+const calc = R.curryN(3, (config, unit, expr) => {
+  return expr.reduce((acc, arr, index, expr) => {
+    if (isOperator(arr)) {
+      return acc
+    }
+
+    if (index > 0) {
+      const prev = expr[index - 1]
+
+      if (!isOperator(prev)) {
+        // throw
+      }
+
+      const f = operator(prev)
+
+      if (isPair(arr)) {
+        return f(acc, convertPair(config, unit, arr))
+      } else {
+        return f(acc, calc(config, unit, arr))
+      }
+    }
+
+    if (isPair(arr)) {
+      return convertPair(config, unit, arr)
+    }
+
+    return calc(config, unit, arr)
+  }, 0)
+})
+
+const convert = R.curryN(3, (config, unit, expr) =>
+  R.ifElse(isPair, convertPair(config, unit), calc(config, unit))(expr),
+)
 
 /**
  * Creates a conversion function. The config allows you to adjust the parameters used to make conversions of relative units like `rem` or `%`.
