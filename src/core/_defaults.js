@@ -8,7 +8,26 @@ import { parse } from '../parse'
 
 const vw = isBrowser() ? window.innerWidth : 0
 const vh = isBrowser() ? window.innerHeight : 0
-const getHead = R.compose(R.head, R.flatten)
+const flatHead = R.compose(R.head, R.flatten)
+
+const getProperty = property => R.compose(Number, R.prop(property))
+const getStyle = prop => R.compose(String, R.prop(prop), getComputedStyle)
+
+const getNodePropValue = prop =>
+  R.compose(Number, flatHead, parse, getStyle(prop))
+
+const getNodeProperty = (name, prop, val) =>
+  R.compose(
+    R.ifElse(isHTMLElement, getNodePropValue(prop), R.always(val)),
+    R.prop(name),
+  )
+
+const __default = (property, node, prop, val) =>
+  R.ifElse(
+    R.has(property),
+    getProperty(property),
+    R.ifElse(R.has(node), getNodeProperty(node, prop, val), R.always(val)),
+  )
 
 export const getViewportWidth: Default<Config> = R.propOr(vw, 'viewportWidth')
 
@@ -23,27 +42,6 @@ export const getViewportMax: Default<Config> = R.converge(R.max, [
   getViewportWidth,
   getViewportHeight,
 ])
-
-const _getProperty = property => config => Number(R.prop(property, config))
-
-const _getNodePropertyValue = (prop, node) =>
-  R.compose(Number, getHead, parse, String, R.prop(prop), getComputedStyle)(
-    node,
-  )
-
-const _getNodeProperty = (name, prop, val) => config =>
-  R.ifElse(
-    node => node instanceof HTMLElement,
-    node => _getNodePropertyValue(prop, node),
-    R.always(val),
-  )(R.prop(name, config))
-
-const __default = (property, node, prop, val) =>
-  R.ifElse(
-    R.has(property),
-    _getProperty(property),
-    R.ifElse(R.has(node), _getNodeProperty(node, prop, val), R.always(val)),
-  )
 
 export const getRootFontSize: Default<Config> = __default(
   'rootFontSize',

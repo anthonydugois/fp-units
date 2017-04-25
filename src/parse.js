@@ -2,21 +2,40 @@
 
 import R from 'ramda'
 
-const UNIT_REGEX = /([\d.+-]+(?:e?[\d.+-]+)*)\s*([a-z%]*)/gi
+const re = () => /calc\((.+)\)|([+-]?[\d.]+(?:e?[+-]?[\d.]+)*)([a-z%]*)/gi
+const UNIT_REGEX = re()
+const OPERATORS_REGEX = /([/*]|[+-]\s)/g
 
-const getPair = R.compose(
-  R.adjust(String, 1),
-  R.adjust(Number, 0),
-  R.slice(1, 3),
-)
+const isNotNil = R.complement(R.isNil)
 
-const getMatch = str => UNIT_REGEX.exec(str)
+const getCalc = R.compose(String, R.nth(1))
+const getValue = R.compose(Number, R.nth(2))
+const getUnit = R.compose(String, R.nth(3))
+
+const shouldProcessCalc = R.compose(isNotNil, R.nth(1))
+
+const getPair = R.converge(R.pair, [getValue, getUnit])
+const exec = str => UNIT_REGEX.exec(str)
 
 const next = (str, arr) => res =>
   R.compose(getPairs(str), R.append(getPair(res)))(arr)
 
 const getPairs = R.curryN(2, (str, arr) =>
-  R.compose(R.ifElse(R.isNil, R.always(arr), next(str, arr)), getMatch)(str),
+  R.compose(R.ifElse(R.isNil, R.always(arr), next(str, arr)), exec)(str),
+)
+
+const splitByOp = R.split(OPERATORS_REGEX)
+
+const execPair = R.ifElse(
+  R.test(UNIT_REGEX),
+  R.compose(getPair, str => re().exec(str)),
+  R.identity,
+)
+
+const processCalc = R.compose(
+  R.map(R.compose(execPair, R.trim)),
+  splitByOp,
+  getCalc,
 )
 
 /**
