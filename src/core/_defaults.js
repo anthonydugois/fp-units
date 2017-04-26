@@ -1,21 +1,18 @@
 // @flow
 
-import type { Config } from '../types'
-
 import R from 'ramda'
+import parse from 'postcss-value-parser'
 import { isBrowser, isHTMLElement } from './_is'
-import { parse } from '../parse'
 
 const vw = isBrowser() ? window.innerWidth : 0
 const vh = isBrowser() ? window.innerHeight : 0
-const flatHead = R.compose(R.head, R.flatten)
+const getNumber = R.compose(Number, R.propOr(0, 'number'), parse.unit)
 
 const getProperty = property => R.compose(Number, R.prop(property))
 const getStyle = prop =>
   R.compose(String, R.prop(prop), n => getComputedStyle(n))
 
-const getNodePropValue = prop =>
-  R.compose(Number, flatHead, parse, getStyle(prop))
+const getNodePropValue = prop => R.compose(getNumber, getStyle(prop))
 
 const getNodeProperty = (name, prop, val) =>
   R.compose(
@@ -30,49 +27,49 @@ const __default = (property, node, prop, val) =>
     R.ifElse(R.has(node), getNodeProperty(node, prop, val), R.always(val)),
   )
 
-export const getViewportWidth: Default<Config> = R.propOr(vw, 'viewportWidth')
+export const getViewportWidth: Default<Object> = R.propOr(vw, 'viewportWidth')
 
-export const getViewportHeight: Default<Config> = R.propOr(vh, 'viewportHeight')
+export const getViewportHeight: Default<Object> = R.propOr(vh, 'viewportHeight')
 
-export const getViewportMin: Default<Config> = R.converge(R.min, [
+export const getViewportMin: Default<Object> = R.converge(R.min, [
   getViewportWidth,
   getViewportHeight,
 ])
 
-export const getViewportMax: Default<Config> = R.converge(R.max, [
+export const getViewportMax: Default<Object> = R.converge(R.max, [
   getViewportWidth,
   getViewportHeight,
 ])
 
-export const getRootFontSize: Default<Config> = __default(
+export const getRootFontSize: Default<Object> = __default(
   'rootFontSize',
   'root',
   'fontSize',
   16,
 )
 
-export const getRootLineHeight: Default<Config> = __default(
+export const getRootLineHeight: Default<Object> = __default(
   'rootLineHeight',
   'root',
   'lineHeight',
   16,
 )
 
-export const getElementFontSize: Default<Config> = __default(
+export const getElementFontSize: Default<Object> = __default(
   'fontSize',
   'element',
   'fontSize',
   16,
 )
 
-export const getElementLineHeight: Default<Config> = __default(
+export const getElementLineHeight: Default<Object> = __default(
   'lineHeight',
   'element',
   'lineHeight',
   16,
 )
 
-export const getElementSize: Default<Config> = __default(
+export const getElementSize: Default<Object> = __default(
   'size',
   'element',
   'width',
