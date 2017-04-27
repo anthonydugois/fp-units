@@ -1,35 +1,86 @@
 // @flow
 
+import type { Config } from '../types'
+
 import R from 'ramda'
-import parse from 'postcss-value-parser'
-import { isBrowser, isHTMLElement } from './_is'
+import { isWindow, isDocument, isHTMLElement } from './_is'
+import { ast } from './_ast'
 
-const vw = isBrowser() ? window.innerWidth : 0
-const vh = isBrowser() ? window.innerHeight : 0
-const getNumber = R.compose(Number, R.propOr(0, 'number'), parse.unit)
+const __innerWidth = 0
+const __innerHeight = 0
+const __rootFontSize = 16
+const __rootLineHeight = 16
+const __nodeFontSize = 16
+const __nodeLineHeight = 16
+const __nodeSize = 0
 
-const getProperty = property => R.compose(Number, R.prop(property))
-const getStyle = prop =>
-  R.compose(String, R.prop(prop), n => getComputedStyle(n))
+export const getDefaultConfig: (c?: Object) => Config = (config = {}) => ({
+  window: isWindow()
+    ? window
+    : {
+        innerWidth: __innerWidth,
+        innerHeight: __innerHeight,
+      },
+  document: isDocument()
+    ? document
+    : {
+        lineHeight: 16,
+        fontSize: 16,
+      },
+  node: {
+    width: 0,
+    lineHeight: 16,
+    fontSize: 16,
+  },
+  property: 'width',
+  ...config,
+})
 
-const getNodePropValue = prop => R.compose(getNumber, getStyle(prop))
+const getWindow: (c: Object) => Object = R.propOr({}, 'window')
+const getNode: (c: Object) => Object = R.propOr({}, 'node')
+const getDocument: (c: Object) => Object = R.propOr({}, 'document')
+const getProperty: (c: Object) => string = R.propOr('', 'property')
 
-const getNodeProperty = (name, prop, val) =>
-  R.compose(
-    R.ifElse(isHTMLElement, getNodePropValue(prop), R.always(val)),
-    R.prop(name),
-  )
-
-const __default = (property, node, prop, val) =>
+const getRoot: (c: Object) => Object = R.compose(
   R.ifElse(
-    R.has(property),
-    getProperty(property),
-    R.ifElse(R.has(node), getNodeProperty(node, prop, val), R.always(val)),
-  )
+    R.has('documentElement'),
+    R.propOr({}, 'documentElement'),
+    R.identity,
+  ),
+  getDocument,
+)
 
-export const getViewportWidth: Default<Object> = R.propOr(vw, 'viewportWidth')
+const getDimension: (a: Array<Array<Object>>) => Object = R.compose(
+  R.defaultTo({}),
+  R.head,
+  R.flatten,
+)
 
-export const getViewportHeight: Default<Object> = R.propOr(vh, 'viewportHeight')
+const getValue: (a: Array<Array<Object>>) => string = R.compose(
+  R.propOr('', 'value'),
+  getDimension,
+)
+
+const getNumber: (s: string) => number = R.compose(Number, getValue, ast)
+
+const getProp: (p: string, n: HTMLElement) => string = (prop, node) =>
+  R.compose(String, R.prop(prop), getComputedStyle)(node)
+
+const getPropValue: (p: string) => (n: HTMLElement) => number = prop => node =>
+  getNumber(getProp(prop, node))
+
+const getNodeSizeByProp: (p: string, n: HTMLElement) => number = (prop, node) =>
+  R.ifElse(isHTMLElement, getPropValue(prop), R.propOr(__nodeSize, prop))(node)
+
+export const getViewportWidth: Default<Object> = R.compose(
+  R.propOr(__innerWidth, 'innerWidth'),
+  getWindow,
+)
+
+export const getViewportHeight: Default<Object> = R.compose(
+  R.propOr(__innerHeight, 'innerHeight'),
+  getWindow,
+)
 
 export const getViewportMin: Default<Object> = R.converge(R.min, [
   getViewportWidth,
@@ -41,37 +92,43 @@ export const getViewportMax: Default<Object> = R.converge(R.max, [
   getViewportHeight,
 ])
 
-export const getRootFontSize: Default<Object> = __default(
-  'rootFontSize',
-  'root',
-  'fontSize',
-  16,
+export const getRootFontSize: Default<Object> = R.compose(
+  R.ifElse(
+    isHTMLElement,
+    getPropValue('fontSize'),
+    R.propOr(__rootFontSize, 'fontSize'),
+  ),
+  getRoot,
 )
 
-export const getRootLineHeight: Default<Object> = __default(
-  'rootLineHeight',
-  'root',
-  'lineHeight',
-  16,
+export const getRootLineHeight: Default<Object> = R.compose(
+  R.ifElse(
+    isHTMLElement,
+    getPropValue('lineHeight'),
+    R.propOr(__rootLineHeight, 'lineHeight'),
+  ),
+  getRoot,
 )
 
-export const getElementFontSize: Default<Object> = __default(
-  'fontSize',
-  'element',
-  'fontSize',
-  16,
+export const getNodeFontSize: Default<Object> = R.compose(
+  R.ifElse(
+    isHTMLElement,
+    getPropValue('fontSize'),
+    R.propOr(__nodeFontSize, 'fontSize'),
+  ),
+  getNode,
 )
 
-export const getElementLineHeight: Default<Object> = __default(
-  'lineHeight',
-  'element',
-  'lineHeight',
-  16,
+export const getNodeLineHeight: Default<Object> = R.compose(
+  R.ifElse(
+    isHTMLElement,
+    getPropValue('lineHeight'),
+    R.propOr(__nodeLineHeight, 'lineHeight'),
+  ),
+  getNode,
 )
 
-export const getElementSize: Default<Object> = __default(
-  'size',
-  'element',
-  'width',
-  vw,
-)
+export const getNodeSize: Default<Object> = R.converge(getNodeSizeByProp, [
+  getProperty,
+  getNode,
+])

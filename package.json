@@ -21,7 +21,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "postcss-value-parser": "^3.3.0",
+    "css-tree": "^1.0.0-alpha19",
     "ramda": "^0.23.0"
   },
   "devDependencies": {
@@ -31,6 +31,7 @@
     "babel-loader": "^6.4.1",
     "babel-plugin-ramda": "^1.2.0",
     "babel-plugin-transform-flow-strip-types": "^6.22.0",
+    "babel-plugin-transform-object-rest-spread": "^6.23.0",
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-es2016": "^6.24.1",
     "babel-preset-es2017": "^6.24.1",
