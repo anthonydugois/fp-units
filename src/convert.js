@@ -6,7 +6,7 @@ import R from 'ramda'
 import * as defaults from './core/_defaults'
 import { ast } from './core/_ast'
 
-const conversion: (
+const conv: (
   f: Function,
 ) => (c: Object, d: Function) => (n: number) => number = coef => (
   config,
@@ -15,42 +15,42 @@ const conversion: (
 
 const CONVERTERS = {
   px: {
-    px: conversion(R.always(1)),
-    cm: conversion(R.always(R.divide(2.54, 96))),
-    mm: conversion(R.always(R.divide(25.4, 96))),
-    q: conversion(R.always(R.divide(101.6, 96))),
-    in: conversion(R.always(R.divide(1, 96))),
-    pc: conversion(R.always(R.divide(6, 96))),
-    pt: conversion(R.always(R.divide(72, 96))),
-    rem: conversion(R.compose(R.divide(1), defaults.getRootFontSize)),
-    em: conversion(R.compose(R.divide(1), defaults.getNodeFontSize)),
-    rlh: conversion(R.compose(R.divide(1), defaults.getRootLineHeight)),
-    lh: conversion(R.compose(R.divide(1), defaults.getNodeLineHeight)),
-    '%': conversion(R.compose(R.divide(100), defaults.getNodeSize)),
-    vw: conversion(R.compose(R.divide(100), defaults.getViewportWidth)),
-    vh: conversion(R.compose(R.divide(100), defaults.getViewportHeight)),
-    vmin: conversion(R.compose(R.divide(100), defaults.getViewportMin)),
-    vmax: conversion(R.compose(R.divide(100), defaults.getViewportMax)),
+    px: conv(R.always(1)),
+    cm: conv(R.always(R.divide(2.54, 96))),
+    mm: conv(R.always(R.divide(25.4, 96))),
+    q: conv(R.always(R.divide(101.6, 96))),
+    in: conv(R.always(R.divide(1, 96))),
+    pc: conv(R.always(R.divide(6, 96))),
+    pt: conv(R.always(R.divide(72, 96))),
+    rem: conv(R.compose(R.divide(1), defaults.getRootFontSize)),
+    em: conv(R.compose(R.divide(1), defaults.getNodeFontSize)),
+    rlh: conv(R.compose(R.divide(1), defaults.getRootLineHeight)),
+    lh: conv(R.compose(R.divide(1), defaults.getNodeLineHeight)),
+    '%': conv(R.compose(R.divide(100), defaults.getNodeSize)),
+    vw: conv(R.compose(R.divide(100), defaults.getViewportWidth)),
+    vh: conv(R.compose(R.divide(100), defaults.getViewportHeight)),
+    vmin: conv(R.compose(R.divide(100), defaults.getViewportMin)),
+    vmax: conv(R.compose(R.divide(100), defaults.getViewportMax)),
     // todo: ch, ex
   },
   rad: {
-    rad: conversion(R.always(1)),
-    deg: conversion(R.always(R.divide(180, Math.PI))),
-    grad: conversion(R.always(R.divide(200, Math.PI))),
-    turn: conversion(R.always(R.divide(1, R.multiply(2, Math.PI)))),
+    rad: conv(R.always(1)),
+    deg: conv(R.always(R.divide(180, Math.PI))),
+    grad: conv(R.always(R.divide(200, Math.PI))),
+    turn: conv(R.always(R.divide(1, R.multiply(2, Math.PI)))),
   },
   s: {
-    s: conversion(R.always(1)),
-    ms: conversion(R.always(1000)),
+    s: conv(R.always(1)),
+    ms: conv(R.always(1000)),
   },
   hz: {
-    hz: conversion(R.always(1)),
-    khz: conversion(R.always(10e-3)),
+    hz: conv(R.always(1)),
+    khz: conv(R.always(10e-3)),
   },
   dppx: {
-    dppx: conversion(R.always(1)),
-    dpi: conversion(R.always(96)),
-    dpcm: conversion(R.always(R.divide(96, 2.54))),
+    dppx: conv(R.always(1)),
+    dpi: conv(R.always(96)),
+    dpcm: conv(R.always(R.divide(96, 2.54))),
   },
 }
 
@@ -69,61 +69,80 @@ const makeGlobalConverter: (
 ) => (u: string) => Function = map => unit =>
   R.ifElse(
     R.isNil,
-    R.always(conversion(R.always(1))),
-    canonical => map[canonical][unit],
+    R.always(conv(R.always(1))),
+    //c => map[c][unit],
+    c => R.propOr(conv(R.always(1)), unit, R.propOr({}, c, map)),
   )(getCanonical(unit))
 
 const getConverter: (u: string) => Function = makeGlobalConverter(CONVERTERS)
 
 const getType: (n: Object) => string = R.propOr('', 'type')
+
+const isFunction = R.compose(R.equals('Function'), getType)
+const isNumber = R.compose(R.equals('Number'), getType)
+const isPercentage = R.compose(R.equals('Percentage'), getType)
+const isDimension = R.compose(R.equals('Dimension'), getType)
+const isOperator = R.compose(R.equals('Operator'), getType)
+
 const getValue: (n: Object) => string = R.propOr('', 'value')
 const getName: (n: Object) => string = R.propOr('', 'name')
-const getUnit: (n: Object) => string = R.propOr('', 'unit')
+
+const getUnit: (n: Object) => string = R.ifElse(
+  isPercentage,
+  R.always('%'),
+  R.propOr('', 'unit'),
+)
+
 const getChildren: (n: Object) => Array<Object> = R.propOr([], 'children')
 
 const getValueNumber: (n: Object) => number = R.compose(Number, getValue)
 const getUnitString: (n: Object) => string = R.compose(String, getUnit)
 
-const isFunction = R.compose(R.equals('Function'), getType)
-const isNumber = R.compose(R.equals('Number'), getType)
-const isDimension = R.compose(R.equals('Dimension'), getType)
-const isOperator = R.compose(R.equals('Operator'), getType)
-
 const isCalc = R.both(isFunction, R.compose(R.equals('calc'), getName))
-const isCalcConcerned = R.anyPass([isNumber, isDimension, isOperator])
+
+const isCalcConcerned = R.anyPass([
+  isNumber,
+  isPercentage,
+  isDimension,
+  isOperator,
+])
 
 const isMult = R.compose(R.either(R.equals('/'), R.equals('*')), getValue)
 const isAdd = R.compose(R.either(R.equals('+'), R.equals('-')), getValue)
 
-const operator: (s: string) => Function = R.cond([
+const operator: (s: string) => (l: number, r: number) => number = R.cond([
   [R.equals('+'), R.always(R.add)],
   [R.equals('-'), R.always(R.subtract)],
   [R.equals('/'), R.always(R.divide)],
   [R.equals('*'), R.always(R.multiply)],
 ])
 
-const additives = (config, unit, nodes) =>
+const ofHead = R.compose(R.of, R.head)
+
+const calcLeftRight: (
+  p: (o: Object) => boolean,
+) => (
+  c: Object,
+  u: string,
+) => (n: Array<Object>) => Array<Object> = predicate => (
+  config,
+  unit,
+) => nodes =>
   R.tail(nodes).reduce((acc, node, index, nodes) => {
     const prev = R.defaultTo({}, R.last(acc))
     const next = nodes[index + 1]
 
     if (isOperator(node)) {
-      if (isAdd(node)) {
+      if (predicate(node)) {
         const op = getValue(node)
         const f = operator(op)
 
-        const left = convert(
-          config,
-          unit,
-          getUnitString(prev),
-          getValueNumber(prev),
+        const left = Number(
+          convert(config, unit, getUnitString(prev), getValueNumber(prev)),
         )
 
-        const right = convert(
-          config,
-          unit,
-          getUnitString(next),
-          getValueNumber(next),
+        const right = Number(
+          convert(config, unit, getUnitString(next), getValueNumber(next)),
         )
 
         const value = String(f(left, right))
@@ -143,108 +162,69 @@ const additives = (config, unit, nodes) =>
     }
 
     return acc
-  }, R.of(R.head(nodes)))
+  }, ofHead(nodes))
 
-const multiplicatives = (config, unit, nodes) =>
-  R.tail(nodes).reduce((acc, node, index, nodes) => {
-    const prev = R.defaultTo({}, R.last(acc))
-    const next = nodes[index + 1]
+const add: (
+  c: Object,
+  u: string,
+) => (n: Array<Object>) => Array<Object> = calcLeftRight(isAdd)
 
-    if (isOperator(node)) {
-      if (isMult(node)) {
-        const op = getValue(node)
-        const f = operator(op)
-
-        const left = convert(
-          config,
-          unit,
-          getUnitString(prev),
-          getValueNumber(prev),
-        )
-
-        const right = convert(
-          config,
-          unit,
-          getUnitString(next),
-          getValueNumber(next),
-        )
-
-        const value = String(f(left, right))
-        const type = R.and(isNumber(prev), isNumber(next))
-          ? 'Number'
-          : 'Dimension'
-
-        acc[acc.length - 1] = {
-          ...acc[acc.length - 1],
-          value,
-          type,
-          unit,
-        }
-      } else {
-        acc.push(node, next)
-      }
-    }
-
-    return acc
-  }, R.of(R.head(nodes)))
+const mult: (
+  c: Object,
+  u: string,
+) => (n: Array<Object>) => Array<Object> = calcLeftRight(isMult)
 
 const filterCalcNodes: (
   c: Object,
   u: string,
-  n: Array<Object>,
-) => Array<Object> = (config, unit, nodes) =>
-  R.reduce(
-    (acc, node) => {
-      if (isCalc(node)) {
-        acc.push(calc(config, unit, getChildren(node)))
-      }
+) => (n: Array<Object>) => Array<Object> = (config, unit) =>
+  R.reduce((acc, node) => {
+    if (isCalc(node)) {
+      acc.push(calc(config, unit, getChildren(node)))
+    }
 
-      if (isCalcConcerned(node)) {
-        acc.push(node)
-      }
+    if (isCalcConcerned(node)) {
+      acc.push(node)
+    }
 
-      return acc
-    },
-    [],
-    nodes,
-  )
+    return acc
+  }, [])
 
-const calc = R.curryN(3, (config, unit, nodes) =>
-  R.head(
-    additives(
-      config,
-      unit,
-      multiplicatives(config, unit, filterCalcNodes(config, unit, nodes)),
-    ),
-  ),
-)
+const calc: (c: Object, u: string, n: Array<Object>) => Object = (
+  config,
+  unit,
+  nodes,
+) =>
+  R.compose(
+    R.defaultTo({}),
+    R.head,
+    add(config, unit),
+    mult(config, unit),
+    filterCalcNodes(config, unit),
+  )(nodes)
 
 const convertValue: (
   c: Object,
   u: string,
-) => (n: Array<Object>) => Array<number> = (config, unit) => nodes =>
-  R.reduce(
-    (acc, node) => {
-      if (isCalc(node)) {
-        const _node = calc(config, unit, getChildren(node))
-        const from = getUnitString(_node)
-        const value = getValueNumber(_node)
+) => (n: Array<Object>) => Array<number> = (config, unit) =>
+  R.reduce((acc, node) => {
+    if (isCalc(node)) {
+      const _node = calc(config, unit, getChildren(node))
+      const from = getUnitString(_node)
+      const value = getValueNumber(_node)
 
-        acc.push(Number(convert(config, unit, from, value)))
-      }
+      acc.push(Number(convert(config, unit, from, value)))
+    }
 
-      if (R.or(isDimension(node), isNumber(node))) {
-        const from = getUnitString(node)
-        const value = getValueNumber(node)
+    if (R.anyPass([isDimension, isNumber, isPercentage])(node)) {
+      const from = getUnitString(node)
+      const value = getValueNumber(node)
 
-        acc.push(Number(convert(config, unit, from, value)))
-      }
+      acc.push(Number(convert(config, unit, from, value)))
+    }
 
-      return acc
-    },
-    [],
-    nodes,
-  )
+    return acc
+  }, [])
 
 /**
  * Naively converts a numeric value in the desired unit. This function is more granular than `converter`, but it does not handle automatic parsing, calc expressions and multiple conversions. This function is more useful when you need specialized converters.
@@ -334,4 +314,6 @@ export const converter: Converter<
   Object,
   string,
   Values
-> = R.curryN(3, (c, u, v) => R.map(convertValue(c, u), ast(v)))
+> = R.curryN(3, (config, unit, values) =>
+  R.map(convertValue(config, unit), ast(values)),
+)
