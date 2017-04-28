@@ -5,14 +5,16 @@ import type { Config } from '../types'
 import R from 'ramda'
 import { isWindow, isDocument, isHTMLElement } from './_is'
 import { ast } from './_ast'
+import { conv } from './_conv'
 
-const __innerWidth = 0
-const __innerHeight = 0
-const __rootFontSize = 16
-const __rootLineHeight = 16
-const __nodeFontSize = 16
-const __nodeLineHeight = 16
-const __nodeSize = 0
+export const __defaultConverter = conv(R.always(1))
+export const __innerWidth = 0
+export const __innerHeight = 0
+export const __rootFontSize = 16
+export const __rootLineHeight = 16
+export const __nodeFontSize = 16
+export const __nodeLineHeight = 16
+export const __nodeSize = 0
 
 export const getDefaultConfig: (c?: Object) => Config = (config = {}) => ({
   window: isWindow()
@@ -69,8 +71,17 @@ const getProp: (p: string, n: HTMLElement) => string = (prop, node) =>
 const getPropValue: (p: string) => (n: HTMLElement) => number = prop => node =>
   getNumber(getProp(prop, node))
 
+const throwUnspecifiedProp: (p: string) => Function = prop => () => {
+  throw new Error(
+    `Unspecified property: no \`${prop}\` property found in the provided node config.`,
+  )
+}
+
+const retrieveProp: (p: string) => (n: Object) => number = prop =>
+  R.ifElse(R.has(prop), R.propOr(__nodeSize, prop), throwUnspecifiedProp(prop))
+
 const getNodeSizeByProp: (p: string, n: HTMLElement) => number = (prop, node) =>
-  R.ifElse(isHTMLElement, getPropValue(prop), R.propOr(__nodeSize, prop))(node)
+  R.ifElse(isHTMLElement, getPropValue(prop), retrieveProp(prop))(node)
 
 export const getViewportWidth: Default<Object> = R.compose(
   R.propOr(__innerWidth, 'innerWidth'),

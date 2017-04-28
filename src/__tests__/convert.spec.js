@@ -1,6 +1,40 @@
 import { convert, converter } from '../convert'
 
-test('should correctly convert absolut lengths to px', () => {
+test('should correctly convert a single absolute unit', () => {
+  expect(convert({}, 'px', 'cm', 2)).toBeCloseTo(75.59055, 5)
+  expect(convert({}, 'cm', 'px', 75.59055)).toBeCloseTo(2, 5)
+
+  expect(convert({}, 'rad', 'deg', 180)).toBeCloseTo(Math.PI, 5)
+  expect(convert({}, 'deg', 'rad', Math.PI)).toBeCloseTo(180, 5)
+})
+
+test('should correctly convert a single relative unit', () => {
+  const cfg = {
+    document: { fontSize: 16 },
+    node: { width: 100 },
+    property: 'width',
+  }
+
+  expect(convert(cfg, 'px', 'rem', 2)).toBeCloseTo(32, 5)
+  expect(convert(cfg, 'rem', 'px', 32)).toBeCloseTo(2, 5)
+
+  expect(convert(cfg, 'px', '%', 50)).toBeCloseTo(50, 5)
+  expect(convert(cfg, '%', 'px', 50)).toBeCloseTo(50, 5)
+})
+
+test('should throw when trying to convert incompatible units', () => {
+  expect(() => convert({}, 'rad', 'px', 100)).toThrow()
+})
+
+test('should throw when trying to convert from an unknown unit', () => {
+  expect(() => convert({}, 'px', 'foo', 100)).toThrow()
+})
+
+test('should throw when trying to convert in an unknown unit', () => {
+  expect(() => convert({}, 'foo', 'px', 100)).toThrow()
+})
+
+test('should correctly convert absolute units', () => {
   const [[px, cm, mm, q, _in, pc, pt]] = converter(
     {},
     'px',
@@ -16,7 +50,7 @@ test('should correctly convert absolut lengths to px', () => {
   expect(pt).toBeCloseTo(32, 5)
 })
 
-test('should correctly convert relative lengths to px', () => {
+test('should correctly convert relative units', () => {
   const [[rem, em, rlh, lh, per, vw, vh, vmin, vmax]] = converter(
     {
       window: { innerWidth: 1920, innerHeight: 1080 },
@@ -39,7 +73,7 @@ test('should correctly convert relative lengths to px', () => {
   expect(vmax).toBeCloseTo(192, 5)
 })
 
-test('should correctly convert relative lengths based on DOM nodes', () => {
+test('should correctly convert relative units based on DOM nodes', () => {
   const node = document.createElement('div')
 
   document.documentElement.style.fontSize = '16px'
@@ -66,23 +100,17 @@ test('should correctly convert relative lengths based on DOM nodes', () => {
   expect(vmax).toBeCloseTo(102.4, 5)
 })
 
-test('should correctly convert absolut angles to rad', () => {
-  const [[rad, deg, grad, turn]] = converter(
-    {},
-    'rad',
-    '1rad 180deg 100grad 0.25turn',
-  )
-
-  expect(rad).toBeCloseTo(1, 5)
-  expect(deg).toBeCloseTo(3.14159, 5)
-  expect(grad).toBeCloseTo(1.5708, 5)
-  expect(turn).toBeCloseTo(1.5708, 5)
+test('should handle string, number and array', () => {
+  expect(converter({}, 'px', '2rem')).toEqual([[32]])
+  expect(converter({}, 'px', 50)).toEqual([[50]])
+  expect(converter({}, 'px', [50, '2rem'])).toEqual([[50], [32]])
+  expect(converter({}, 'px', [50, '2rem 4rem'])).toEqual([[50], [32, 64]])
 })
 
-test('should throw when trying to convert incompatible units', () => {
-  expect(() => convert({}, 'rad', 'px', 100)).toThrow()
-})
-
-test('should throw when trying to convert in an unknown unit', () => {
-  expect(() => convert({}, 'foo', 'px', 100)).toThrow()
+test('should handle calc expressions', () => {
+  expect(converter({}, 'px', 'calc(20px + 30px)')).toEqual([[50]])
+  expect(converter({}, 'px', 'calc(20px * 2)')).toEqual([[40]])
+  expect(converter({}, 'px', 'calc(20px * calc(4 * 2))')).toEqual([[160]])
+  expect(converter({}, 'px', 'calc(20px + 30px * 2)')).toEqual([[80]])
+  expect(converter({}, 'px', 'calc(20px + 30px / 2)')).toEqual([[35]])
 })

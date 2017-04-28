@@ -65,7 +65,7 @@ test('should return root line height', () => {
   expect(getRootLineHeight({ document: document })).toBe(16)
 })
 
-test('should return element size', () => {
+test('should return node size', () => {
   const div = document.createElement('div')
   div.style.width = '250px'
 
@@ -73,7 +73,16 @@ test('should return element size', () => {
   expect(getNodeSize({ node: div, property: 'width' })).toBe(250)
 })
 
-test('should return element font size', () => {
+test('should throw when trying to get node size based on unspecified property', () => {
+  expect(() =>
+    getNodeSize({
+      node: { width: 500 },
+      property: 'height',
+    }),
+  ).toThrow()
+})
+
+test('should return node font size', () => {
   const div = document.createElement('div')
   div.style.fontSize = '28px'
 
@@ -81,7 +90,7 @@ test('should return element font size', () => {
   expect(getNodeFontSize({ node: div })).toBe(28)
 })
 
-test('should return element line height', () => {
+test('should return node line height', () => {
   const div = document.createElement('div')
   div.style.lineHeight = '28px'
 
