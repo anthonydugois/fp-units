@@ -3,9 +3,8 @@
 import type { Values } from './types'
 
 import R from 'ramda'
-import parse from 'postcss-value-parser'
 import * as defaults from './core/_defaults'
-import { mock } from './core/_mock'
+import { ast } from './core/_ast'
 
 const conversion: (
   f: Function,
@@ -24,14 +23,15 @@ const CONVERTERS = {
     pc: conversion(R.always(R.divide(6, 96))),
     pt: conversion(R.always(R.divide(72, 96))),
     rem: conversion(R.compose(R.divide(1), defaults.getRootFontSize)),
-    em: conversion(R.compose(R.divide(1), defaults.getElementFontSize)),
+    em: conversion(R.compose(R.divide(1), defaults.getNodeFontSize)),
     rlh: conversion(R.compose(R.divide(1), defaults.getRootLineHeight)),
-    lh: conversion(R.compose(R.divide(1), defaults.getElementLineHeight)),
-    '%': conversion(R.compose(R.divide(100), defaults.getElementSize)),
+    lh: conversion(R.compose(R.divide(1), defaults.getNodeLineHeight)),
+    '%': conversion(R.compose(R.divide(100), defaults.getNodeSize)),
     vw: conversion(R.compose(R.divide(100), defaults.getViewportWidth)),
     vh: conversion(R.compose(R.divide(100), defaults.getViewportHeight)),
     vmin: conversion(R.compose(R.divide(100), defaults.getViewportMin)),
     vmax: conversion(R.compose(R.divide(100), defaults.getViewportMax)),
+    // todo: ch, ex
   },
   rad: {
     rad: conversion(R.always(1)),
@@ -54,12 +54,10 @@ const CONVERTERS = {
   },
 }
 
-const safeCanonical: (b: string, m: Object) => Object = R.propOr({})
-
 const hasUnit: (u: string, m: Object) => (b: string) => boolean = (
   unit,
   map,
-) => base => R.has(unit, safeCanonical(base, map))
+) => base => R.has(unit, R.propOr({}, base, map))
 
 const makeGetCanonical: (m: Object) => (u: string) => ?string = map => unit =>
   R.find(hasUnit(unit, map), R.keys(map))
@@ -77,35 +75,27 @@ const makeGlobalConverter: (
 
 const getConverter: (u: string) => Function = makeGlobalConverter(CONVERTERS)
 
-const getType = R.propOr('', 'type')
-const getValue = R.propOr('', 'value')
+const getType: (n: Object) => string = R.propOr('', 'type')
+const getValue: (n: Object) => string = R.propOr('', 'value')
+const getName: (n: Object) => string = R.propOr('', 'name')
+const getUnit: (n: Object) => string = R.propOr('', 'unit')
+const getChildren: (n: Object) => Array<Object> = R.propOr([], 'children')
 
-const isFunction = R.compose(R.equals('function'), getType)
-const isSpace = R.compose(R.equals('space'), getType)
-const isWord = R.compose(R.equals('word'), getType)
+const getValueNumber: (n: Object) => number = R.compose(Number, getValue)
+const getUnitString: (n: Object) => string = R.compose(String, getUnit)
 
-const RE = /([+-]?\d*\.?\d*(?:e[+-]?\d*\.?\d*)?)([a-z%]*)/i
+const isFunction = R.compose(R.equals('Function'), getType)
+const isNumber = R.compose(R.equals('Number'), getType)
+const isDimension = R.compose(R.equals('Dimension'), getType)
+const isOperator = R.compose(R.equals('Operator'), getType)
 
-const isOperator = node => R.contains(getValue(node), ['+', '-', '/', '*'])
-const isCalc = R.both(isFunction, R.compose(R.equals('calc'), getValue))
-const isUnit = R.both(isWord, R.compose(R.test(RE), getValue))
+const isCalc = R.both(isFunction, R.compose(R.equals('calc'), getName))
+const isCalcConcerned = R.anyPass([isNumber, isDimension, isOperator])
 
-const getNumber = R.compose(Number, R.nth(1))
-const getUnit = R.compose(String, R.nth(2))
+const isMult = R.compose(R.either(R.equals('/'), R.equals('*')), getValue)
+const isAdd = R.compose(R.either(R.equals('+'), R.equals('-')), getValue)
 
-const getPair: (n: Object) => [number, string] = R.compose(
-  R.converge(R.pair, [getNumber, getUnit]),
-  R.match(RE),
-  getValue,
-)
-
-const isMultiplicative = R.compose(
-  R.either(R.equals('/'), R.equals('*')),
-  getValue,
-)
-const isAdditive = R.compose(R.either(R.equals('+'), R.equals('-')), getValue)
-
-const operator = R.cond([
+const operator: (s: string) => Function = R.cond([
   [R.equals('+'), R.always(R.add)],
   [R.equals('-'), R.always(R.subtract)],
   [R.equals('/'), R.always(R.divide)],
@@ -113,97 +103,148 @@ const operator = R.cond([
 ])
 
 const additives = (config, unit, nodes) =>
-  nodes.reduce((acc, node, index) => {
-    if (index > 0) {
-      const prev = R.last(acc)
-      const next = nodes[index + 1]
+  R.tail(nodes).reduce((acc, node, index, nodes) => {
+    const prev = R.defaultTo({}, R.last(acc))
+    const next = nodes[index + 1]
 
-      if (isOperator(node)) {
-        if (isAdditive(node)) {
-          const op = getValue(node)
-          const f = operator(op)
+    if (isOperator(node)) {
+      if (isAdd(node)) {
+        const op = getValue(node)
+        const f = operator(op)
 
-          const left = convertPair(config, unit, getPair(prev))
-          const right = convertPair(config, unit, getPair(next))
+        const left = convert(
+          config,
+          unit,
+          getUnitString(prev),
+          getValueNumber(prev),
+        )
 
-          acc[acc.length - 1].value = String(f(left, right))
-        } else {
-          acc.push(node, next)
+        const right = convert(
+          config,
+          unit,
+          getUnitString(next),
+          getValueNumber(next),
+        )
+
+        const value = String(f(left, right))
+        const type = R.and(isNumber(prev), isNumber(next))
+          ? 'Number'
+          : 'Dimension'
+
+        acc[acc.length - 1] = {
+          ...acc[acc.length - 1],
+          value,
+          type,
+          unit,
         }
+      } else {
+        acc.push(node, next)
       }
-    } else {
-      acc.push(node)
     }
 
     return acc
-  }, [])
+  }, R.of(R.head(nodes)))
 
 const multiplicatives = (config, unit, nodes) =>
-  nodes.reduce((acc, node, index) => {
-    if (index > 0) {
-      const prev = R.last(acc)
-      const next = nodes[index + 1]
+  R.tail(nodes).reduce((acc, node, index, nodes) => {
+    const prev = R.defaultTo({}, R.last(acc))
+    const next = nodes[index + 1]
 
-      if (isOperator(node)) {
-        if (isMultiplicative(node)) {
-          const op = getValue(node)
-          const f = operator(op)
+    if (isOperator(node)) {
+      if (isMult(node)) {
+        const op = getValue(node)
+        const f = operator(op)
 
-          const left = convertPair(config, unit, getPair(prev))
-          const right = convertPair(config, unit, getPair(next))
+        const left = convert(
+          config,
+          unit,
+          getUnitString(prev),
+          getValueNumber(prev),
+        )
 
-          acc[acc.length - 1].value = String(f(left, right))
-        } else {
-          acc.push(node, next)
+        const right = convert(
+          config,
+          unit,
+          getUnitString(next),
+          getValueNumber(next),
+        )
+
+        const value = String(f(left, right))
+        const type = R.and(isNumber(prev), isNumber(next))
+          ? 'Number'
+          : 'Dimension'
+
+        acc[acc.length - 1] = {
+          ...acc[acc.length - 1],
+          value,
+          type,
+          unit,
         }
+      } else {
+        acc.push(node, next)
       }
-    } else {
-      acc.push(node)
     }
 
     return acc
-  }, [])
+  }, R.of(R.head(nodes)))
 
-const filter = (config, unit, nodes) =>
-  nodes.reduce((acc, node) => {
-    if (R.either(isUnit, isOperator)(node)) {
-      acc.push(node)
-    }
+const filterCalcNodes: (
+  c: Object,
+  u: string,
+  n: Array<Object>,
+) => Array<Object> = (config, unit, nodes) =>
+  R.reduce(
+    (acc, node) => {
+      if (isCalc(node)) {
+        acc.push(calc(config, unit, getChildren(node)))
+      }
 
-    if (isCalc(node)) {
-      acc.push(calc(config, unit, node))
-    }
+      if (isCalcConcerned(node)) {
+        acc.push(node)
+      }
 
-    return acc
-  }, [])
+      return acc
+    },
+    [],
+    nodes,
+  )
 
-const calc = (config, unit, { nodes }) =>
+const calc = R.curryN(3, (config, unit, nodes) =>
   R.head(
     additives(
       config,
       unit,
-      multiplicatives(config, unit, filter(config, unit, nodes)),
+      multiplicatives(config, unit, filterCalcNodes(config, unit, nodes)),
     ),
+  ),
+)
+
+const convertValue: (
+  c: Object,
+  u: string,
+) => (n: Array<Object>) => Array<number> = (config, unit) => nodes =>
+  R.reduce(
+    (acc, node) => {
+      if (isCalc(node)) {
+        const _node = calc(config, unit, getChildren(node))
+        const from = getUnitString(_node)
+        const value = getValueNumber(_node)
+
+        acc.push(Number(convert(config, unit, from, value)))
+      }
+
+      if (R.or(isDimension(node), isNumber(node))) {
+        const from = getUnitString(node)
+        const value = getValueNumber(node)
+
+        acc.push(Number(convert(config, unit, from, value)))
+      }
+
+      return acc
+    },
+    [],
+    nodes,
   )
-
-const convertPair = (config, unit, [value, from]) =>
-  convert(config, unit, from, value)
-
-const convertNode: (c: Object, u: string) => (n: Object) => Array<number> = (
-  config,
-  unit,
-) => ({ nodes }) =>
-  nodes.reduce((acc, node) => {
-    if (isCalc(node)) {
-      acc.push(convertPair(config, unit, getPair(calc(config, unit, node))))
-    }
-
-    if (isUnit(node)) {
-      acc.push(convertPair(config, unit, getPair(node)))
-    }
-
-    return acc
-  }, [])
 
 /**
  * Naively converts a numeric value in the desired unit. This function is more granular than `converter`, but it does not handle automatic parsing, calc expressions and multiple conversions. This function is more useful when you need specialized converters.
@@ -234,11 +275,12 @@ export const convert: Convert<
   Object,
   string,
   number
-> = R.curryN(4, (config, unit, _from, value) => {
-  const canonicalUnit = getCanonical(unit)
+> = R.curryN(4, (_config, _unit, _from, _value) => {
+  const config = defaults.getDefaultConfig(_config)
+  const canonicalUnit = getCanonical(_unit)
 
   if (R.isNil(canonicalUnit)) {
-    throw new Error(`Unknown unit: \`${unit}\` is not handled.`)
+    throw new Error(`Unknown unit: \`${_unit}\` is not handled.`)
   }
 
   const from = R.when(R.isEmpty, R.always(String(canonicalUnit)))(_from)
@@ -250,14 +292,14 @@ export const convert: Convert<
 
   if (!R.equals(canonicalUnit, canonicalFrom)) {
     throw new Error(
-      `Incompatible units: \`${from}\` cannot be converted to \`${unit}\`.`,
+      `Incompatible units: \`${from}\` cannot be converted to \`${_unit}\`.`,
     )
   }
 
   return R.compose(
-    getConverter(unit)(config, R.identity),
+    getConverter(_unit)(config, R.identity),
     getConverter(from)(config, R.divide(1)),
-  )(value)
+  )(_value)
 })
 
 /**
@@ -292,4 +334,4 @@ export const converter: Converter<
   Object,
   string,
   Values
-> = R.curryN(3, (c, u, v) => R.map(convertNode(c, u), mock(v)))
+> = R.curryN(3, (c, u, v) => R.map(convertValue(c, u), ast(v)))

@@ -22,6 +22,17 @@ test('should return the default config', () => {
     },
     property: 'width',
   })
+
+  expect(getDefaultConfig({ property: 'height' })).toEqual({
+    window: window,
+    document: document,
+    node: {
+      width: 0,
+      fontSize: 16,
+      lineHeight: 16,
+    },
+    property: 'height',
+  })
 })
 
 test('should return viewport width', () => {
