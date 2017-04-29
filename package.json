@@ -28,7 +28,7 @@
     "babel-cli": "^6.24.1",
     "babel-core": "^6.24.1",
     "babel-jest": "^19.0.0",
-    "babel-loader": "^6.4.1",
+    "babel-loader": "^7.0.0",
     "babel-plugin-ramda": "^1.2.0",
     "babel-plugin-transform-flow-strip-types": "^6.22.0",
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
@@ -37,11 +37,12 @@
     "babel-preset-es2017": "^6.24.1",
     "cross-env": "^4.0.0",
     "documentation": "^4.0.0-beta.19",
-    "flow-bin": "^0.43.1",
+    "flow-bin": "^0.45.0",
     "jest": "^19.0.2",
     "path": "^0.12.7",
     "rimraf": "^2.6.1",
-    "webpack": "^2.3.3"
+    "webpack": "^2.3.3",
+    "webpack-bundle-analyzer": "^2.4.0"
   },
   "scripts": {
     "test": "jest",
@@ -52,7 +53,7 @@
     "build:umd:min": "cross-env BABEL_ENV=commonjs NODE_ENV=production webpack src/index.js dist/fp-units.umd.min.js",
     "clean": "rimraf lib dist coverage",
     "lint": "npm run lint:flow",
-    "lint:flow": "flow check || exit 0",
+    "lint:flow": "flow check",
     "preversion": "npm test",
     "postversion": "git push && git push --tags",
     "prepublish": "npm run lint && npm test && npm run build",

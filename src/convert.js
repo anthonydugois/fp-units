@@ -74,27 +74,37 @@ const calcLeftRight: (
     const next = nodes[index + 1]
 
     if (is.isNodeOperator(node)) {
+      const op = selectors.getValue(node)
+      const f = selectors.getOperator(op)
+
+      const prevUnit = selectors.getUnitString(prev)
+      const nextUnit = selectors.getUnitString(next)
+
+      const canonicalPrevUnit = getCanonical(prevUnit)
+      const canonicalNextUnit = getCanonical(nextUnit)
+
+      if (!is.isNodeNumber(prev) && R.isNil(canonicalPrevUnit)) {
+        throw new Error(`Unknown unit: \`${prevUnit}\` is not handled.`)
+      }
+
+      if (!is.isNodeNumber(next) && R.isNil(canonicalNextUnit)) {
+        throw new Error(`Unknown unit: \`${nextUnit}\` is not handled.`)
+      }
+
+      if (
+        !is.isNodeNumber(prev) &&
+        !is.isNodeNumber(next) &&
+        !R.equals(canonicalPrevUnit, canonicalNextUnit)
+      ) {
+        throw new Error(
+          `Incompatible units: calc operation between \`${prevUnit}\` and \`${nextUnit}\` cannot be performed.`,
+        )
+      }
+
       if (predicate(node)) {
-        const op = selectors.getValue(node)
-        const f = selectors.getOperator(op)
-
-        const left = Number(
-          convert(
-            config,
-            unit,
-            selectors.getUnitString(prev),
-            selectors.getValueNumber(prev),
-          ),
-        )
-
-        const right = Number(
-          convert(
-            config,
-            unit,
-            selectors.getUnitString(next),
-            selectors.getValueNumber(next),
-          ),
-        )
+        const _convertNode = convertNode(config, unit)
+        const left = _convertNode(prev)
+        const right = _convertNode(next)
 
         const value = String(f(left, right))
         const type = R.and(is.isNodeNumber(prev), is.isNodeNumber(next))
@@ -131,7 +141,7 @@ const filterCalcNodes: (
 ) => (n: Array<Object>) => Array<Object> = (config, unit) =>
   R.reduce((acc, node) => {
     if (is.isFunctionCalc(node)) {
-      acc.push(calc(config, unit, selectors.getChildren(node)))
+      acc.push(calc(config, unit)(selectors.getChildren(node)))
     }
 
     if (is.isFunctionCalcConcerned(node)) {
@@ -141,10 +151,9 @@ const filterCalcNodes: (
     return acc
   }, [])
 
-const calc: (c: Object, u: string, n: Array<Object>) => Object = (
+const calc: (c: Object, u: string) => (n: Array<Object>) => Object = (
   config,
   unit,
-  nodes,
 ) =>
   R.compose(
     R.defaultTo({}),
@@ -152,16 +161,37 @@ const calc: (c: Object, u: string, n: Array<Object>) => Object = (
     add(config, unit),
     mult(config, unit),
     filterCalcNodes(config, unit),
-  )(nodes)
+  )
 
-const convertValue: (
+const convertNodeDimension: (c: Object, u: string) => (n: Object) => number = (
+  config,
+  unit,
+) =>
+  R.compose(
+    Number,
+    R.converge(convert(config, unit), [
+      selectors.getUnitString,
+      selectors.getValueNumber,
+    ]),
+  )
+
+const convertNode: (c: Object, u: string) => (n: Object) => number = (
+  config,
+  unit,
+) =>
+  R.cond([
+    [is.isNodeNumber, selectors.getValueNumber],
+    [is.isNodeDimension, convertNodeDimension(config, unit)],
+  ])
+
+const convertNodes: (
   c: Object,
   u: string,
 ) => (n: Array<Object>) => Array<number> = (config, unit) => nodes =>
   R.reduce(
     (acc, node) => {
       if (is.isFunctionCalc(node)) {
-        const _node = calc(config, unit, selectors.getChildren(node))
+        const _node = calc(config, unit)(selectors.getChildren(node))
         const from = selectors.getUnitString(_node)
         const value = selectors.getValueNumber(_node)
 
@@ -186,7 +216,9 @@ const convertValue: (
   )
 
 /**
- * Naively converts a numeric value in the desired unit. This function is more granular than `converter`, but it does not handle automatic parsing, calc expressions and multiple conversions. This function is more useful when you need specialized converters.
+ * Naively converts a numeric value into the desired unit. This function is more granular than `converter`, but it does not handle automatic parsing, calc expressions and multiple conversions. This function is more useful when you need specialized converters.
+ *
+ * The config object allows you to adjust some parameters used to perform relative units conversions (e.g. `rem` or `%`).
  * @param {Object} config The config object.
  * @param {string} unit The desired unit.
  * @param {string} from The base unit.
@@ -242,9 +274,9 @@ export const convert: Convert<
 })
 
 /**
- * Creates a conversion function. The config allows you to adjust the parameters used to make conversions of relative units like `rem` or `%`.
+ * Smartly converts the provided values into the desired unit. You can convert numbers, strings and calc expressions.
  *
- * Note: if you don't provide unit, it will assume that the provided value is expressed in the canonical unit corresponding to the nature of the desired unit (e.g. `px` if the desired unit is a length).
+ * Note: if the provided values don't have any unit, it will assume that they are expressed in the canonical unit corresponding to the nature of the desired unit (e.g. `px` if the desired unit is a length).
  * @param {Object} config The config object.
  * @param {string} unit The desired unit.
  * @param {string|number|Array<string|number>} values The values and units to convert.
@@ -253,28 +285,27 @@ export const convert: Convert<
  * import { converter } from 'fp-units'
  *
  * const to = converter({
- *   root: document.documentElement,
- *   element: document.querySelector('#foobar'),
+ *   node: document.querySelector('#foobar'),
  * })
  *
  * to('px', '30 2rem 4em 2rlh 4lh 50% 25vw 40vh 5vmin 10vmax')
- * // [30, 32, 96, 32, 104, 50, 480, 432, 54, 192]
+ * // [[30, 32, 96, 32, 104, 50, 480, 432, 54, 192]]
  *
- * to('px', [30, '2rem', '4em'])
- * // [30, 32, 96]
+ * to('px', [30, '2rem 4px', '4em'])
+ * // [[30], [32, 4], [96]]
  *
  * to('rem', 32)
- * // [2]
+ * // [[2]]
  *
- * to('rem', '32px')
- * // [2]
+ * to('rem', 'calc(2 * calc(12px + 4px))')
+ * // [[2]]
  */
 export const converter: Converter<
   Object,
   string,
   Values
 > = R.curryN(3, (config, unit, values) =>
-  R.map(convertValue(config, unit), ast(values)),
+  R.map(convertNodes(config, unit), ast(values)),
 )
 
-console.log(converter({}, 'px', 50))
+console.log(converter({}, 'px', 'calc(2px / 0)'))

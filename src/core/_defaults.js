@@ -52,13 +52,13 @@ const getRoot: (c: Object) => Object = R.compose(
   getDocument,
 )
 
-const getDimension: (a: Array<Array<Object>>) => Object = R.compose(
+const getDimension: (a: Object[][]) => Object = R.compose(
   R.defaultTo({}),
   R.head,
   R.flatten,
 )
 
-const getValue: (a: Array<Array<Object>>) => string = R.compose(
+const getValue: (a: Object[][]) => string = R.compose(
   R.propOr('', 'value'),
   getDimension,
 )

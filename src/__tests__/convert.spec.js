@@ -114,3 +114,12 @@ test('should handle calc expressions', () => {
   expect(converter({}, 'px', 'calc(20px + 30px * 2)')).toEqual([[80]])
   expect(converter({}, 'px', 'calc(20px + 30px / 2)')).toEqual([[35]])
 })
+
+test('should throw when trying to calc unknown units', () => {
+  expect(() => converter({}, 'px', 'calc(2foo + 1px)')).toThrow()
+  expect(() => converter({}, 'px', 'calc(1px * 2foo)')).toThrow()
+})
+
+test('should throw when trying to calc incompatible units', () => {
+  expect(() => converter({}, 'px', 'calc(2deg + 1px)')).toThrow()
+})

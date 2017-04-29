@@ -1,8 +1,8 @@
 // @flow
 
 export const conv: (
-  f: Function,
-) => (c: Object, d: Function) => (n: number) => number = coef => (
-  config,
+  co: (a: any) => number,
+) => (c: Object, f: (a: any) => number) => (n: number) => number = coef => (
+  cfg,
   f,
-) => n => f(coef(config)) * n
+) => n => f(coef(cfg)) * n
