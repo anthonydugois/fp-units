@@ -1,6 +1,5 @@
 import path from 'path'
 import webpack from 'webpack'
-import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
 
 const srcPath = path.resolve(__dirname, 'src')
 
@@ -18,13 +17,4 @@ export default {
       },
     ],
   },
-  plugins: [
-    new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-    }),
-    ...(process.env.NODE_ENV === 'production' && [
-      new webpack.optimize.UglifyJsPlugin({ compress: { warnings: false } }),
-    ]),
-    new BundleAnalyzerPlugin(),
-  ],
 }

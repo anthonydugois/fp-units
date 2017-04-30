@@ -7,4 +7,4 @@ export type Config = {
   property: string,
 }
 
-export type Values = string | number | Array<string | number>
+export type Values = string | number | (string | number)[]

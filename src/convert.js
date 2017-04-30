@@ -1,6 +1,6 @@
 // @flow
 
-import type { Values } from './types'
+import type { Config, Values } from './types'
 
 import R from 'ramda'
 import * as defaults from './core/_defaults'
@@ -12,12 +12,12 @@ import { conv } from './core/_conv'
 const CONVERTERS = {
   px: {
     px: defaults.__defaultConverter,
-    cm: conv(R.always(R.divide(2.54, 96))),
-    mm: conv(R.always(R.divide(25.4, 96))),
-    q: conv(R.always(R.divide(101.6, 96))),
-    in: conv(R.always(R.divide(1, 96))),
-    pc: conv(R.always(R.divide(6, 96))),
-    pt: conv(R.always(R.divide(72, 96))),
+    cm: conv(R.always(2.54 / 96)),
+    mm: conv(R.always(25.4 / 96)),
+    q: conv(R.always(101.6 / 96)),
+    in: conv(R.always(1 / 96)),
+    pc: conv(R.always(6 / 96)),
+    pt: conv(R.always(72 / 96)),
     rem: conv(R.compose(R.divide(1), defaults.getRootFontSize)),
     em: conv(R.compose(R.divide(1), defaults.getNodeFontSize)),
     rlh: conv(R.compose(R.divide(1), defaults.getRootLineHeight)),
@@ -31,9 +31,9 @@ const CONVERTERS = {
   },
   rad: {
     rad: defaults.__defaultConverter,
-    deg: conv(R.always(R.divide(180, Math.PI))),
-    grad: conv(R.always(R.divide(200, Math.PI))),
-    turn: conv(R.always(R.divide(1, R.multiply(2, Math.PI)))),
+    deg: conv(R.always(180 / Math.PI)),
+    grad: conv(R.always(200 / Math.PI)),
+    turn: conv(R.always(1 / (2 * Math.PI))),
   },
   s: {
     s: defaults.__defaultConverter,
@@ -46,7 +46,7 @@ const CONVERTERS = {
   dppx: {
     dppx: defaults.__defaultConverter,
     dpi: conv(R.always(96)),
-    dpcm: conv(R.always(R.divide(96, 2.54))),
+    dpcm: conv(R.always(96 / 2.54)),
   },
 }
 
@@ -54,18 +54,15 @@ const getCanonical: (u: string) => ?string = selectors.makeGetCanonical(
   CONVERTERS,
 )
 
-const getConverter: (u: string) => Function = selectors.makeGlobalConverter(
-  CONVERTERS,
-)
+const getConverter: (
+  u: string,
+) => ConvFunc<Config> = selectors.makeGlobalConverter(CONVERTERS)
 
 const ofHead = R.compose(R.of, R.head)
 
 const calcLeftRight: (
   p: (o: Object) => boolean,
-) => (
-  c: Object,
-  u: string,
-) => (n: Array<Object>) => Array<Object> = predicate => (
+) => (c: Object, u: string) => (n: Object[]) => Object[] = predicate => (
   config,
   unit,
 ) => nodes =>
@@ -77,6 +74,32 @@ const calcLeftRight: (
       const op = selectors.getValue(node)
       const f = selectors.getOperator(op)
 
+      if (op === '*') {
+        if (!is.isNodeNumber(prev) && !is.isNodeNumber(next)) {
+          throw new Error(
+            `Invalid calc expression: at least one side of a multiplication should be a number.`,
+          )
+        }
+      }
+
+      if (op === '/') {
+        if (!is.isNodeDimension(prev) && !is.isNodeNumber(prev)) {
+          throw new Error(
+            `Invalid calc expression: the left side of a division should be a dimension or a number.`,
+          )
+        }
+
+        if (!is.isNodeNumber(next)) {
+          throw new Error(
+            `Invalid calc expression: the right side of a division should be a number.`,
+          )
+        }
+
+        if (selectors.getValueNumber(next) === 0) {
+          throw new Error(`Invalid calc expression: division by 0.`)
+        }
+      }
+
       const prevUnit = selectors.getUnitString(prev)
       const nextUnit = selectors.getUnitString(next)
 
@@ -84,11 +107,15 @@ const calcLeftRight: (
       const canonicalNextUnit = getCanonical(nextUnit)
 
       if (!is.isNodeNumber(prev) && R.isNil(canonicalPrevUnit)) {
-        throw new Error(`Unknown unit: \`${prevUnit}\` is not handled.`)
+        throw new Error(
+          `Invalid calc expression: Unknown unit: \`${prevUnit}\` is not handled.`,
+        )
       }
 
       if (!is.isNodeNumber(next) && R.isNil(canonicalNextUnit)) {
-        throw new Error(`Unknown unit: \`${nextUnit}\` is not handled.`)
+        throw new Error(
+          `Invalid calc expression: Unknown unit: \`${nextUnit}\` is not handled.`,
+        )
       }
 
       if (
@@ -97,7 +124,7 @@ const calcLeftRight: (
         !R.equals(canonicalPrevUnit, canonicalNextUnit)
       ) {
         throw new Error(
-          `Incompatible units: calc operation between \`${prevUnit}\` and \`${nextUnit}\` cannot be performed.`,
+          `Invalid calc expression: Incompatible units: calc operation between \`${prevUnit}\` and \`${nextUnit}\` cannot be performed.`,
         )
       }
 
@@ -112,10 +139,9 @@ const calcLeftRight: (
           : 'Dimension'
 
         acc[acc.length - 1] = {
-          ...acc[acc.length - 1],
-          value,
           type,
-          unit,
+          value,
+          ...(type === 'Dimension' ? { unit } : {}),
         }
       } else {
         acc.push(node, next)
@@ -125,20 +151,18 @@ const calcLeftRight: (
     return acc
   }, ofHead(nodes))
 
-const add: (
-  c: Object,
-  u: string,
-) => (n: Array<Object>) => Array<Object> = calcLeftRight(is.isAdd)
+const add: (c: Object, u: string) => (n: Object[]) => Object[] = calcLeftRight(
+  is.isAdd,
+)
 
-const mult: (
-  c: Object,
-  u: string,
-) => (n: Array<Object>) => Array<Object> = calcLeftRight(is.isMult)
+const mult: (c: Object, u: string) => (n: Object[]) => Object[] = calcLeftRight(
+  is.isMult,
+)
 
-const filterCalcNodes: (
-  c: Object,
-  u: string,
-) => (n: Array<Object>) => Array<Object> = (config, unit) =>
+const filterCalcNodes: (c: Object, u: string) => (n: Object[]) => Object[] = (
+  config,
+  unit,
+) =>
   R.reduce((acc, node) => {
     if (is.isFunctionCalc(node)) {
       acc.push(calc(config, unit)(selectors.getChildren(node)))
@@ -151,7 +175,7 @@ const filterCalcNodes: (
     return acc
   }, [])
 
-const calc: (c: Object, u: string) => (n: Array<Object>) => Object = (
+const calc: (c: Object, u: string) => (n: Object[]) => Object = (
   config,
   unit,
 ) =>
@@ -184,10 +208,10 @@ const convertNode: (c: Object, u: string) => (n: Object) => number = (
     [is.isNodeDimension, convertNodeDimension(config, unit)],
   ])
 
-const convertNodes: (
-  c: Object,
-  u: string,
-) => (n: Array<Object>) => Array<number> = (config, unit) => nodes =>
+const convertNodes: (c: Object, u: string) => (n: Object[]) => number[] = (
+  config,
+  unit,
+) => nodes =>
   R.reduce(
     (acc, node) => {
       if (is.isFunctionCalc(node)) {
@@ -307,5 +331,3 @@ export const converter: Converter<
 > = R.curryN(3, (config, unit, values) =>
   R.map(convertNodes(config, unit), ast(values)),
 )
-
-console.log(converter({}, 'px', 'calc(2px / 0)'))

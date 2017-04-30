@@ -23,9 +23,27 @@ test('should return the default config', () => {
     property: 'width',
   })
 
-  expect(getDefaultConfig({ property: 'height' })).toEqual({
-    window: window,
-    document: document,
+  expect(
+    getDefaultConfig({
+      window: {
+        innerWidth: 1024,
+        innerHeight: 768,
+      },
+      document: {
+        lineHeight: 24,
+        fontSize: 24,
+      },
+      property: 'height',
+    }),
+  ).toEqual({
+    window: {
+      innerWidth: 1024,
+      innerHeight: 768,
+    },
+    document: {
+      lineHeight: 24,
+      fontSize: 24,
+    },
     node: {
       width: 0,
       fontSize: 16,

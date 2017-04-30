@@ -113,6 +113,7 @@ test('should handle calc expressions', () => {
   expect(converter({}, 'px', 'calc(20px * calc(4 * 2))')).toEqual([[160]])
   expect(converter({}, 'px', 'calc(20px + 30px * 2)')).toEqual([[80]])
   expect(converter({}, 'px', 'calc(20px + 30px / 2)')).toEqual([[35]])
+  expect(converter({}, 'px', 'calc(5 * 4)')).toEqual([[20]])
 })
 
 test('should throw when trying to calc unknown units', () => {
@@ -122,4 +123,16 @@ test('should throw when trying to calc unknown units', () => {
 
 test('should throw when trying to calc incompatible units', () => {
   expect(() => converter({}, 'px', 'calc(2deg + 1px)')).toThrow()
+})
+
+test('should throw when trying to multiply a dimension by another dimension', () => {
+  expect(() => converter({}, 'px', 'calc(2rem * 2px)')).toThrow()
+})
+
+test('should throw when trying to divide by a dimension', () => {
+  expect(() => converter({}, 'px', 'calc(2rem / 2px)')).toThrow()
+})
+
+test('should throw when trying to divide by 0', () => {
+  expect(() => converter({}, 'px', 'calc(2rem / 0)')).toThrow()
 })

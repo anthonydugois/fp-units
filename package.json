@@ -13,11 +13,14 @@
     "url": "https://github.com/anthonydugois/fp-units.git"
   },
   "keywords": [
+    "css",
     "css-units",
     "units",
     "converter",
     "fp",
-    "functional-programming"
+    "functional",
+    "functional-programming",
+    "calc"
   ],
   "license": "MIT",
   "dependencies": {
@@ -47,10 +50,9 @@
   "scripts": {
     "test": "jest",
     "docs": "documentation readme src/index.js --section=API",
-    "build": "npm run build:commonjs && npm run build:umd && npm run build:umd:min",
-    "build:commonjs": "cross-env BABEL_ENV=commonjs babel src --ignore __tests__ --out-dir lib",
-    "build:umd": "cross-env BABEL_ENV=commonjs NODE_ENV=development webpack src/index.js dist/fp-units.umd.js",
-    "build:umd:min": "cross-env BABEL_ENV=commonjs NODE_ENV=production webpack src/index.js dist/fp-units.umd.min.js",
+    "build": "npm run build:umd && npm run build:umd:min",
+    "build:umd": "webpack src/index.js dist/fp-units.umd.js",
+    "build:umd:min": "webpack -p src/index.js dist/fp-units.umd.min.js",
     "clean": "rimraf lib dist coverage",
     "lint": "npm run lint:flow",
     "lint:flow": "flow check",
