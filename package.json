@@ -2,7 +2,7 @@
   "name": "fp-units",
   "version": "0.1.0",
   "description": "An FP-oriented library to easily convert CSS units.",
-  "main": "src/index.js",
+  "main": "lib/index.js",
   "files": [
     "lib",
     "dist"
@@ -49,22 +49,19 @@
   "scripts": {
     "test": "jest",
     "docs": "documentation readme src/index.js --section=API",
-    "build": "npm run build:umd && npm run build:umd:min",
-    "build:umd": "webpack src/index.js dist/fp-units.umd.js",
-    "build:umd:min": "webpack -p src/index.js dist/fp-units.umd.min.js",
+    "build": "npm run build:lib && npm run build:umd && npm run build:umd:min",
+    "build:lib": "babel src --ignore *.spec.js --out-dir lib",
+    "build:umd": "webpack src/index.js dist/fp-units.js",
+    "build:umd:min": "webpack -p src/index.js dist/fp-units.min.js",
     "clean": "rimraf lib dist coverage",
-    "lint": "npm run lint:flow",
-    "lint:flow": "flow check",
+    "flow": "flow check",
     "preversion": "npm test",
     "postversion": "git push && git push --tags",
-    "prepublish": "npm run lint && npm test && npm run build",
+    "prepublish": "npm run flow && npm test && npm run build",
     "postpublish": "npm run clean"
   },
   "jest": {
     "coverageDirectory": "./coverage/",
-    "collectCoverage": true,
-    "testMatch": [
-      "**/__tests__/**"
-    ]
+    "collectCoverage": true
   }
 }

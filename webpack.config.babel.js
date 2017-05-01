@@ -1,18 +1,18 @@
 import path from 'path'
 import webpack from 'webpack'
 
-const srcPath = path.resolve(__dirname, 'src')
+const src = path.resolve(__dirname, 'src')
 
 export default {
   output: {
-    library: 'Units',
+    library: 'units',
     libraryTarget: 'umd',
   },
   module: {
     rules: [
       {
         test: /\.js$/,
-        include: [srcPath],
+        include: [src],
         loader: 'babel-loader',
       },
     ],
