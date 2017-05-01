@@ -2,7 +2,7 @@
 
 import R from 'ramda'
 import * as defaults from './_defaults'
-import { conv } from './_conv'
+import conv from './_conv'
 
 export default {
   px: {

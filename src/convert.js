@@ -3,6 +3,7 @@
 import R from 'ramda'
 import config from './core/_config'
 import { getCanonical, getConverter } from './core/_selectors'
+import { throwUnknownUnit, throwIncompatibleUnits } from './core/_throws'
 
 const convert: Convert<Object, string, number> = (
   _cfg,
@@ -14,20 +15,18 @@ const convert: Convert<Object, string, number> = (
   const canonicalUnit = getCanonical(_unit)
 
   if (R.isNil(canonicalUnit)) {
-    throw new Error(`Unknown unit: \`${_unit}\` is not handled.`)
+    throwUnknownUnit(_unit)
   }
 
   const from = R.when(R.isEmpty, R.always(String(canonicalUnit)))(_from)
   const canonicalFrom = getCanonical(from)
 
   if (R.isNil(canonicalFrom)) {
-    throw new Error(`Unknown unit: \`${from}\` is not handled.`)
+    throwUnknownUnit(from)
   }
 
   if (!R.equals(canonicalUnit, canonicalFrom)) {
-    throw new Error(
-      `Incompatible units: \`${from}\` cannot be converted to \`${_unit}\`.`,
-    )
+    throwIncompatibleUnits(from, _unit)
   }
 
   return R.compose(

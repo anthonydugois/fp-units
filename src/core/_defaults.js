@@ -2,13 +2,9 @@
 
 import R from 'ramda'
 import { isHTMLElement } from './_is'
-import { ast } from './_ast'
-import { conv } from './_conv'
-
-const getWindow: (c: Object) => Object = R.propOr({}, 'window')
-const getNode: (c: Object) => Object = R.propOr({}, 'node')
-const getDocument: (c: Object) => Object = R.propOr({}, 'document')
-const getProperty: (c: Object) => string = R.propOr('', 'property')
+import { throwUnspecifiedProp } from './_throws'
+import ast from './_ast'
+import conv from './_conv'
 
 const getRoot: (c: Object) => Object = R.compose(
   R.ifElse(
@@ -16,7 +12,7 @@ const getRoot: (c: Object) => Object = R.compose(
     R.propOr({}, 'documentElement'),
     R.identity,
   ),
-  getDocument,
+  R.propOr({}, 'document'),
 )
 
 const getDimension: (a: Object[][]) => Object = R.compose(
@@ -38,12 +34,6 @@ const getProp: (p: string, n: HTMLElement) => string = (prop, node) =>
 const getPropValue: (p: string) => (n: HTMLElement) => number = prop => node =>
   getNumber(getProp(prop, node))
 
-const throwUnspecifiedProp: (p: string) => Function = prop => () => {
-  throw new Error(
-    `Unspecified property: no \`${prop}\` property found in the provided node config.`,
-  )
-}
-
 const retrieveProp: (p: string) => (n: Object) => number = prop =>
   R.ifElse(R.has(prop), R.propOr(16, prop), throwUnspecifiedProp(prop))
 
@@ -52,12 +42,12 @@ const getNodeSizeByProp: (p: string, n: HTMLElement) => number = (prop, node) =>
 
 export const getViewportWidth: Default<Object> = R.compose(
   R.propOr(0, 'innerWidth'),
-  getWindow,
+  R.propOr({}, 'window'),
 )
 
 export const getViewportHeight: Default<Object> = R.compose(
   R.propOr(0, 'innerHeight'),
-  getWindow,
+  R.propOr({}, 'window'),
 )
 
 export const getViewportMin: Default<Object> = R.converge(R.min, [
@@ -86,7 +76,7 @@ export const getRootLineHeight: Default<Object> = R.compose(
 
 export const getNodeFontSize: Default<Object> = R.compose(
   R.ifElse(isHTMLElement, getPropValue('fontSize'), R.propOr(16, 'fontSize')),
-  getNode,
+  R.propOr({}, 'node'),
 )
 
 export const getNodeLineHeight: Default<Object> = R.compose(
@@ -95,10 +85,10 @@ export const getNodeLineHeight: Default<Object> = R.compose(
     getPropValue('lineHeight'),
     R.propOr(16, 'lineHeight'),
   ),
-  getNode,
+  R.propOr({}, 'node'),
 )
 
 export const getNodeSize: Default<Object> = R.converge(getNodeSizeByProp, [
-  getProperty,
-  getNode,
+  R.propOr('', 'property'),
+  R.propOr({}, 'node'),
 ])

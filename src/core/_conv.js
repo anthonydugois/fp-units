@@ -1,8 +1,7 @@
 // @flow
 
-import type { Config } from '../types'
+import type { Config, Coef } from '../types'
 
-export const conv: (c: (a: any) => number) => ConvF<Config> = coef => (
-  cfg,
-  f,
-) => n => f(coef(cfg)) * n
+const conv: (c: Coef) => ConvF<Config> = c => (cfg, f) => n => f(c(cfg)) * n
+
+export default conv

@@ -8,3 +8,7 @@ export type Config = {
 }
 
 export type Values = string | number | (string | number)[]
+
+export type Coef = (a: any) => number
+
+export type Is = (n: Object) => boolean

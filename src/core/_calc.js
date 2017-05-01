@@ -3,6 +3,7 @@
 import R from 'ramda'
 import * as is from './_is'
 import * as selectors from './_selectors'
+import * as throws from './_throws'
 import convert from '../convert'
 
 const ofHead = R.compose(R.of, R.head)
@@ -18,32 +19,26 @@ const calcLeftRight: (
     const next = nodes[index + 1]
 
     if (is.isNodeOperator(node)) {
-      const op = selectors.getValue(node)
+      const op = R.propOr('', 'value', node)
       const f = selectors.getOperator(op)
 
       if (op === '*') {
         if (!is.isNodeNumber(prev) && !is.isNodeNumber(next)) {
-          throw new Error(
-            `Invalid calc expression: at least one side of a multiplication should be a number.`,
-          )
+          throws.throwInvalidCalcMult()
         }
       }
 
       if (op === '/') {
         if (!is.isNodeDimension(prev) && !is.isNodeNumber(prev)) {
-          throw new Error(
-            `Invalid calc expression: the left side of a division should be a dimension or a number.`,
-          )
+          throws.throwInvalidCalcDivLeft()
         }
 
         if (!is.isNodeNumber(next)) {
-          throw new Error(
-            `Invalid calc expression: the right side of a division should be a number.`,
-          )
+          throws.throwInvalidCalcDivRight()
         }
 
         if (selectors.getValueNumber(next) === 0) {
-          throw new Error(`Invalid calc expression: division by 0.`)
+          throws.throwInvalidCalcDiv0()
         }
       }
 
@@ -54,15 +49,11 @@ const calcLeftRight: (
       const canonicalNextUnit = selectors.getCanonical(nextUnit)
 
       if (!is.isNodeNumber(prev) && R.isNil(canonicalPrevUnit)) {
-        throw new Error(
-          `Invalid calc expression: Unknown unit: \`${prevUnit}\` is not handled.`,
-        )
+        throws.throwInvalidCalcUnknownUnit(prevUnit)
       }
 
       if (!is.isNodeNumber(next) && R.isNil(canonicalNextUnit)) {
-        throw new Error(
-          `Invalid calc expression: Unknown unit: \`${nextUnit}\` is not handled.`,
-        )
+        throws.throwInvalidCalcUnknownUnit(nextUnit)
       }
 
       if (
@@ -70,9 +61,7 @@ const calcLeftRight: (
         !is.isNodeNumber(next) &&
         !R.equals(canonicalPrevUnit, canonicalNextUnit)
       ) {
-        throw new Error(
-          `Invalid calc expression: Incompatible units: calc operation between \`${prevUnit}\` and \`${nextUnit}\` cannot be performed.`,
-        )
+        throws.throwInvalidCalcIncompatibleUnits(prevUnit, nextUnit)
       }
 
       if (predicate(node)) {
@@ -122,18 +111,6 @@ const filterCalcNodes: (c: Object, u: string) => (n: Object[]) => Object[] = (
     return acc
   }, [])
 
-export const calc: (c: Object, u: string) => (n: Object[]) => Object = (
-  config,
-  unit,
-) =>
-  R.compose(
-    R.defaultTo({}),
-    R.head,
-    add(config, unit),
-    mult(config, unit),
-    filterCalcNodes(config, unit),
-  )
-
 const convertNodeDimension: (c: Object, u: string) => (n: Object) => number = (
   config,
   unit,
@@ -154,3 +131,17 @@ const convertNode: (c: Object, u: string) => (n: Object) => number = (
     [is.isNodeNumber, selectors.getValueNumber],
     [is.isNodeDimension, convertNodeDimension(config, unit)],
   ])
+
+const calc: (c: Object, u: string) => (n: Object[]) => Object = (
+  config,
+  unit,
+) =>
+  R.compose(
+    R.defaultTo({}),
+    R.head,
+    add(config, unit),
+    mult(config, unit),
+    filterCalcNodes(config, unit),
+  )
+
+export default calc

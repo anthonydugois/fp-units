@@ -6,28 +6,20 @@ import R from 'ramda'
 import { isNodePercentage } from './_is'
 import convs from './_converters'
 
-export const getType: (n: Object) => string = R.propOr('', 'type')
-
-export const getValue: (n: Object) => string = R.propOr('', 'value')
-
-export const getName: (n: Object) => string = R.propOr('', 'name')
-
 const getUnit: (n: Object) => string = node =>
   (isNodePercentage(node) ? '%' : R.propOr('', 'unit', node))
 
-export const getValueNumber: (n: Object) => number = R.compose(Number, getValue)
+export const getValueNumber: (n: Object) => number = R.compose(
+  Number,
+  R.propOr('', 'value'),
+)
 
 export const getUnitString: (n: Object) => string = R.compose(String, getUnit)
-
-const hasUnit: (u: string, m: Object) => (b: string) => boolean = (
-  unit,
-  map,
-) => base => R.has(unit, R.propOr({}, base, map))
 
 export const makeGetCanonical: (
   m: Object,
 ) => (u: string) => ?string = map => unit =>
-  R.find(hasUnit(unit, map), R.keys(map))
+  R.find(base => R.has(unit, R.propOr({}, base, map)), R.keys(map))
 
 const pathToConverter: (m: Object, u: string) => (c: string) => Function = (
   map,
@@ -36,7 +28,7 @@ const pathToConverter: (m: Object, u: string) => (c: string) => Function = (
 
 export const makeGlobalConv: (
   m: Object,
-) => (u: string) => Function = map => unit =>
+) => (u: string) => ConvF<Config> = map => unit =>
   R.ifElse(R.isNil, R.always(convs.px.px), pathToConverter(map, unit))(
     makeGetCanonical(map)(unit),
   )

@@ -5,8 +5,8 @@ import type { Values } from './types'
 import R from 'ramda'
 import * as is from './core/_is'
 import * as selectors from './core/_selectors'
-import { ast } from './core/_ast'
-import { calc } from './core/_calc'
+import ast from './core/_ast'
+import calc from './core/_calc'
 import convert from './convert'
 
 const convertNodes: (c: Object, u: string) => (n: Object[]) => number[] = (
