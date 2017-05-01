@@ -38,7 +38,6 @@
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-es2016": "^6.24.1",
     "babel-preset-es2017": "^6.24.1",
-    "cross-env": "^4.0.0",
     "documentation": "^4.0.0-beta.19",
     "flow-bin": "^0.45.0",
     "jest": "^19.0.2",

@@ -2,14 +2,12 @@
 
 import R from 'ramda'
 import { parse, toPlainObject } from 'css-tree'
-import { isString, isNumber, isArray } from './_is'
-import { getChildren } from './_selectors'
 
 const n: (c: Object) => (s: string) => Object = cfg => str =>
   toPlainObject(parse(str, cfg))
 
 const nodes: (s: string) => Object[] = R.compose(
-  getChildren,
+  R.propOr([], 'children'),
   n({ context: 'value' }),
 )
 
@@ -23,7 +21,7 @@ const handleArray: (a: (number | string)[]) => Object[][] = R.reduce(
 )
 
 export const ast: (v: any) => Object[][] = R.cond([
-  [isString, handleString],
-  [isNumber, handleNumber],
-  [isArray, handleArray],
+  [R.is(String), handleString],
+  [R.is(Number), handleNumber],
+  [R.is(Array), handleArray],
 ])

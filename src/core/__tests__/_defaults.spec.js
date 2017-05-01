@@ -1,5 +1,4 @@
 import {
-  getDefaultConfig,
   getViewportWidth,
   getViewportHeight,
   getViewportMin,
@@ -10,48 +9,6 @@ import {
   getNodeLineHeight,
   getNodeSize,
 } from '../_defaults'
-
-test('should return the default config', () => {
-  expect(getDefaultConfig()).toEqual({
-    window: window,
-    document: document,
-    node: {
-      width: 0,
-      fontSize: 16,
-      lineHeight: 16,
-    },
-    property: 'width',
-  })
-
-  expect(
-    getDefaultConfig({
-      window: {
-        innerWidth: 1024,
-        innerHeight: 768,
-      },
-      document: {
-        lineHeight: 24,
-        fontSize: 24,
-      },
-      property: 'height',
-    }),
-  ).toEqual({
-    window: {
-      innerWidth: 1024,
-      innerHeight: 768,
-    },
-    document: {
-      lineHeight: 24,
-      fontSize: 24,
-    },
-    node: {
-      width: 0,
-      fontSize: 16,
-      lineHeight: 16,
-    },
-    property: 'height',
-  })
-})
 
 test('should return viewport width', () => {
   expect(getViewportWidth({ window: window })).toBe(1024)

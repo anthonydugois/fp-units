@@ -1,19 +1,16 @@
 // @flow
 
+import type { Config } from '../types'
+
 import R from 'ramda'
 import { isNodePercentage } from './_is'
-import { __defaultConverter } from './_defaults'
+import convs from './_converters'
 
 export const getType: (n: Object) => string = R.propOr('', 'type')
 
 export const getValue: (n: Object) => string = R.propOr('', 'value')
 
 export const getName: (n: Object) => string = R.propOr('', 'name')
-
-export const getChildren: (n: Object) => Array<Object> = R.propOr(
-  [],
-  'children',
-)
 
 const getUnit: (n: Object) => string = node =>
   (isNodePercentage(node) ? '%' : R.propOr('', 'unit', node))
@@ -35,14 +32,18 @@ export const makeGetCanonical: (
 const pathToConverter: (m: Object, u: string) => (c: string) => Function = (
   map,
   unit,
-) => canonical => R.pathOr(__defaultConverter, [canonical, unit], map)
+) => canonical => R.pathOr(convs.px.px, [canonical, unit], map)
 
-export const makeGlobalConverter: (
+export const makeGlobalConv: (
   m: Object,
 ) => (u: string) => Function = map => unit =>
-  R.ifElse(R.isNil, R.always(__defaultConverter), pathToConverter(map, unit))(
+  R.ifElse(R.isNil, R.always(convs.px.px), pathToConverter(map, unit))(
     makeGetCanonical(map)(unit),
   )
+
+export const getCanonical: (u: string) => ?string = makeGetCanonical(convs)
+
+export const getConverter: (u: string) => ConvF<Config> = makeGlobalConv(convs)
 
 export const getOperator: (
   s: string,

@@ -1,42 +1,9 @@
 // @flow
 
-import type { Config } from '../types'
-
 import R from 'ramda'
-import { isWindow, isDocument, isHTMLElement } from './_is'
+import { isHTMLElement } from './_is'
 import { ast } from './_ast'
 import { conv } from './_conv'
-
-export const __defaultConverter = conv(R.always(1))
-export const __innerWidth = 0
-export const __innerHeight = 0
-export const __rootFontSize = 16
-export const __rootLineHeight = 16
-export const __nodeFontSize = 16
-export const __nodeLineHeight = 16
-export const __nodeSize = 0
-
-export const getDefaultConfig: (c?: Object) => Config = (config = {}) => ({
-  window: isWindow()
-    ? window
-    : {
-        innerWidth: __innerWidth,
-        innerHeight: __innerHeight,
-      },
-  document: isDocument()
-    ? document
-    : {
-        lineHeight: 16,
-        fontSize: 16,
-      },
-  node: {
-    width: 0,
-    lineHeight: 16,
-    fontSize: 16,
-  },
-  property: 'width',
-  ...config,
-})
 
 const getWindow: (c: Object) => Object = R.propOr({}, 'window')
 const getNode: (c: Object) => Object = R.propOr({}, 'node')
@@ -78,18 +45,18 @@ const throwUnspecifiedProp: (p: string) => Function = prop => () => {
 }
 
 const retrieveProp: (p: string) => (n: Object) => number = prop =>
-  R.ifElse(R.has(prop), R.propOr(__nodeSize, prop), throwUnspecifiedProp(prop))
+  R.ifElse(R.has(prop), R.propOr(16, prop), throwUnspecifiedProp(prop))
 
 const getNodeSizeByProp: (p: string, n: HTMLElement) => number = (prop, node) =>
   R.ifElse(isHTMLElement, getPropValue(prop), retrieveProp(prop))(node)
 
 export const getViewportWidth: Default<Object> = R.compose(
-  R.propOr(__innerWidth, 'innerWidth'),
+  R.propOr(0, 'innerWidth'),
   getWindow,
 )
 
 export const getViewportHeight: Default<Object> = R.compose(
-  R.propOr(__innerHeight, 'innerHeight'),
+  R.propOr(0, 'innerHeight'),
   getWindow,
 )
 
@@ -104,11 +71,7 @@ export const getViewportMax: Default<Object> = R.converge(R.max, [
 ])
 
 export const getRootFontSize: Default<Object> = R.compose(
-  R.ifElse(
-    isHTMLElement,
-    getPropValue('fontSize'),
-    R.propOr(__rootFontSize, 'fontSize'),
-  ),
+  R.ifElse(isHTMLElement, getPropValue('fontSize'), R.propOr(16, 'fontSize')),
   getRoot,
 )
 
@@ -116,17 +79,13 @@ export const getRootLineHeight: Default<Object> = R.compose(
   R.ifElse(
     isHTMLElement,
     getPropValue('lineHeight'),
-    R.propOr(__rootLineHeight, 'lineHeight'),
+    R.propOr(16, 'lineHeight'),
   ),
   getRoot,
 )
 
 export const getNodeFontSize: Default<Object> = R.compose(
-  R.ifElse(
-    isHTMLElement,
-    getPropValue('fontSize'),
-    R.propOr(__nodeFontSize, 'fontSize'),
-  ),
+  R.ifElse(isHTMLElement, getPropValue('fontSize'), R.propOr(16, 'fontSize')),
   getNode,
 )
 
@@ -134,7 +93,7 @@ export const getNodeLineHeight: Default<Object> = R.compose(
   R.ifElse(
     isHTMLElement,
     getPropValue('lineHeight'),
-    R.propOr(__nodeLineHeight, 'lineHeight'),
+    R.propOr(16, 'lineHeight'),
   ),
   getNode,
 )
