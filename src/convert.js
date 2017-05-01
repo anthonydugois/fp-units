@@ -39,11 +39,17 @@ const convert: Convert<Object, string, number> = (
  * Naively converts a numeric value into the desired unit. This function is more granular than `converter`, but it does not handle automatic parsing, calc expressions and multiple conversions. This function is more useful when you need specialized converters.
  *
  * The config object allows you to adjust some parameters used to perform relative units conversions (e.g. `rem` or `%`).
+ * 
+ * @name convert
+ * @function
+ *
  * @param {Object} config The config object.
  * @param {string} unit The desired unit.
  * @param {string} from The base unit.
  * @param {number} value The value to convert.
+ *
  * @return {number}
+ *
  * @example
  * import { convert } from 'fp-units'
  *

@@ -47,10 +47,16 @@ const converter: Converter<Object, string, Values> = (config, unit, values) =>
  * Smartly converts the provided values into the desired unit. You can convert numbers, strings and calc expressions.
  *
  * Note: if the provided values don't have any unit, it will assume that they are expressed in the canonical unit corresponding to the nature of the desired unit (e.g. `px` if the desired unit is a length).
+ *
+ * @name converter
+ * @function
+ *
  * @param {Object} config The config object.
  * @param {string} unit The desired unit.
  * @param {string|number|Array<string|number>} values The values and units to convert.
+ *
  * @return {Array<Array<number>>}
+ * 
  * @example
  * import { converter } from 'fp-units'
  *
