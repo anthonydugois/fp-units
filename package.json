@@ -24,7 +24,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "css-tree": "^1.0.0-alpha19",
+    "css-tree": "^1.0.0-alpha.19",
     "ramda": "^0.23.0"
   },
   "devDependencies": {
